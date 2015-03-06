@@ -26,11 +26,10 @@ func NewNATSpec(ethereum *eth.Ethereum, transaction string) (self *NatSpec, err 
 	if err != nil {
 		return
 	}
-
-	/*	err = self.jsre.Require("lib/abi.js")
-		if err != nil {
-			return
-		}*/
+	_, err = self.jsre.Run("var natspec = require('natspec');")
+	if err != nil {
+		return
+	}
 
 	self.jsre.Run("var transaction = " + transaction + ";")
 
