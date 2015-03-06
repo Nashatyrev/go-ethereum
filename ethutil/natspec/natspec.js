@@ -1824,6 +1824,10 @@ module.exports = {
 
 
         // Handle values that fail the validity test in BigNumber.
+		
+		// Zsolt Felfoldi 15/03/06
+		// modified regexps in order to compile with go JSRE  
+		
         parseNumeric = (function () {
 //            var basePrefix = /^(-?)0([xbo])(?=\w[\w.]*$)/i,
             var basePrefix = /^(-?)0([xbo])/i,
@@ -1831,7 +1835,7 @@ module.exports = {
                 dotBefore = /^\.([^.]+)$/,
                 isInfinityOrNaN = /^-?(Infinity|NaN)$/,
 //                whitespaceOrPlus = /^\s*\+(?=[\w.])|^\s+|\s+$/g;
-                whitespaceOrPlus = /^\s*\+|^\s+|\s+$/g;
+                whitespaceOrPlus = /^\s*\+[\w.]|^\s+|\s+$/g;
 
             return function ( x, str, num, b ) {
 				
@@ -3414,22 +3418,19 @@ var abi = require('./node_modules/ethereum.js/lib/abi.js');
  */
 var natspec = (function () {
     /// Helper method
-    /// Should be called to copy values from object to global context
+    /// Modifications by Zsolt Felfoldi, 15/03/06
+	///  eval() under go JSRE is unable to reach variables that
+	///  are added to the global context runtime, so now we
+	///  create a variable assignment code for each param
+	///  and run in an isolated function(context)
+	///  variable assignment code is returned by copyToContext
+	
     var copyToContext = function (obj, context) {
 		var code = "";
         var keys = Object.keys(obj);
         keys.forEach(function (key) {
             context[key] = obj[key];
 			code = code + "var "+key+" = context['"+key+"'];\n";
-        });
-		return code;
-    }
-
-    var copyToCode = function (obj) {
-		var code = "";
-        var keys = Object.keys(obj);
-        keys.forEach(function (key) {
-			code = code + "var "+key+" = "+obj[key].toString()+";\n";
         });
 		return code;
     }
@@ -3490,9 +3491,7 @@ var natspec = (function () {
             try {
                 var method = getMethodWithName(call.abi, call.method);
                 var params = getMethodInputParams(method, call.transaction); 
-                //copyToContext(params, self);
-				//code = copyToCode(params)
-				code = copyToContext(params, context);
+				code = copyToContext(params, context);  // see copyToContext comments
             }
             catch (err) {
                 return "Natspec evaluation failed, wrong input params";
@@ -3518,11 +3517,11 @@ var natspec = (function () {
             var evaluatedPart;
             try {
 				var fn = new Function("context", code + "return "+toEval+";");
-             	evaluatedPart = fn(context).toString(); 
+             	evaluatedPart = fn(context).toString();   // see copyToContext comments
 //             	evaluatedPart = eval(toEval).toString(); 
             }
             catch (err) {
-                evaluatedPart = err;//'undefined'; 
+                evaluatedPart = 'undefined'; 
             }
 
             evaluatedExpression += evaluatedPart;

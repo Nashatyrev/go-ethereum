@@ -151,6 +151,7 @@ func TestNotice(t *testing.T) {
 	`)
 	ns.SetDescription("Will multiply `a` by 7 and return `a * 7`.")
 	ns.SetMethod("multiply")
+
 	notice := ns.Parse()
 
 	expected := "Will multiply 122 by 7 and return 854."
