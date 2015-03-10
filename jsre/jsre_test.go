@@ -57,7 +57,7 @@ func TestLoad(t *testing.T) {
 func TestBind(t *testing.T) {
 	jsre := New(defaultAssetPath)
 
-	jsre.Bind("no", &testNativeObjectBinding{jsre.toVal})
+	jsre.Bind("no", &testNativeObjectBinding{jsre.ToVal})
 
 	val, err := jsre.Run(`no.testMethod("testMsg")`)
 	if err != nil {

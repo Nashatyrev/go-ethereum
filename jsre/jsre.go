@@ -84,7 +84,7 @@ func (self *JSRE) PrettyPrint(v interface{}) (val otto.Value, err error) {
 	return method.Call(method, v)
 }
 
-func (self *JSRE) toVal(v interface{}) otto.Value {
+func (self *JSRE) ToVal(v interface{}) otto.Value {
 	result, err := self.vm.ToValue(v)
 	if err != nil {
 		fmt.Println("Value unknown:", err)
