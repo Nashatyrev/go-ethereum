@@ -23,6 +23,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path"
 	"runtime"
 	"strconv"
 	"time"
@@ -32,6 +33,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/eth"
 	"github.com/ethereum/go-ethereum/ethutil"
+	"github.com/ethereum/go-ethereum/jsre"
 	"github.com/ethereum/go-ethereum/logger"
 	"github.com/ethereum/go-ethereum/state"
 )
@@ -216,4 +218,23 @@ GO=%s
 GOPATH=%s
 GOROOT=%s
 `, ClientIdentifier, Version, eth.ProtocolVersion, runtime.GOOS, runtime.Version(), os.Getenv("GOPATH"), runtime.GOROOT())
+}
+
+var assetPath = path.Join(os.Getenv("GOPATH"), "src", "github.com", "ethereum", "go-ethereum", "cmd", "mist", "assets", "ext")
+
+func execJsFile(ethereum *eth.Ethereum, filename string) {
+	re := jsre.New(assetPath)
+	// re.Bind("eth", ...)
+
+	if err := re.Load(filename); err != nil {
+		utils.Fatalf("Javascript Error: %v", err)
+	}
+}
+
+func runREPL(ethereum *eth.Ethereum) {
+	re := jsre.New(assetPath)
+	re.Load("bignumber.min.js")
+
+	// xeth := xeth.New(ethereum, nil)
+	ethutil.RunREPL(path.Join(ethereum.DataDir, "repl.history"), re)
 }
