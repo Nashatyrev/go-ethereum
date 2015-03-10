@@ -35,7 +35,10 @@ import (
 	"github.com/ethereum/go-ethereum/ethutil"
 	"github.com/ethereum/go-ethereum/jsre"
 	"github.com/ethereum/go-ethereum/logger"
+	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/ethereum/go-ethereum/rpc/jeth"
 	"github.com/ethereum/go-ethereum/state"
+	"github.com/ethereum/go-ethereum/xeth"
 )
 
 const (
@@ -233,8 +236,28 @@ func execJsFile(ethereum *eth.Ethereum, filename string) {
 
 func runREPL(ethereum *eth.Ethereum) {
 	re := jsre.New(assetPath)
-	re.Load("bignumber.min.js")
-
-	// xeth := xeth.New(ethereum, nil)
+	xeth := xeth.New(ethereum, nil)
+	ethApi := rpc.NewEthereumApi(xeth)
+	re.Bind("jeth", jeth.New(ethApi, re.ToVal))
+	err := re.Load("bignumber.min.js")
+	if err != nil {
+		utils.Fatalf("Error loading bignumber.js: %v", err)
+	}
+	_, err = re.Run("setTimeout = function(cb, delay) {};")
+	if err != nil {
+		utils.Fatalf("Error defining setTimeout: %v", err)
+	}
+	_, err = re.Run(jsre.Ethereum_JS)
+	if err != nil {
+		utils.Fatalf("Error loading ethereum.js: %v", err)
+	}
+	_, err = re.Run("var web3 = require('web3');")
+	if err != nil {
+		utils.Fatalf("Error requiring web3: %v", err)
+	}
+	_, err = re.Run("web3.setProvider(jeth)")
+	if err != nil {
+		utils.Fatalf("Error setting provider: %v", err)
+	}
 	ethutil.RunREPL(path.Join(ethereum.DataDir, "repl.history"), re)
 }
