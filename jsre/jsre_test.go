@@ -44,14 +44,14 @@ func TestLoad(t *testing.T) {
 	}
 
 	// this errors
-	// err = jsre.Load(path.Join(defaultAssetPath, "bignumber.min.js"))
-	// if err != nil {
-	// 	t.Errorf("expected no error, got %v", err)
-	// }
-	// _, err = jsre.Run("x = new BigNumber(123.4567);")
-	// if err != nil {
-	// 	t.Errorf("expected no error, got %v", err)
-	// }
+	err = jsre.Load(path.Join(defaultAssetPath, "bignumber.min.js"))
+	if err != nil {
+		t.Errorf("expected no error, got %v", err)
+	}
+	_, err = jsre.Run("x = new BigNumber(123.4567);")
+	if err != nil {
+		t.Errorf("expected no error, got %v", err)
+	}
 }
 
 func TestBind(t *testing.T) {
@@ -77,10 +77,9 @@ func TestRequire(t *testing.T) {
 	if err == nil {
 		t.Errorf("expected error, got nothing")
 	}
-	// does not work
-	_, err = jsre.Run(`require("bignumber.min"); x = new BigNumber(123.4567)`)
-	// if err != nil {
-	// 	t.Errorf("expected no error, got %v", err)
-	// }
+	_, err = jsre.Run(`require("bignumber.min.js"); x = new BigNumber(123.4567)`)
+	if err != nil {
+		t.Errorf("expected no error, got %v", err)
+	}
 
 }

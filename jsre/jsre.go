@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"github.com/obscuren/otto"
 	"io/ioutil"
-	"os"
-	// "path/filepath"
 
 	"github.com/ethereum/go-ethereum/ethutil"
 )
@@ -53,13 +51,6 @@ func (self *JSRE) load(path string) error {
 
 func (self *JSRE) Bind(name string, v interface{}) (err error) {
 	self.vm.Set(name, v)
-	var t otto.Value
-	t, err = self.vm.Get(name)
-	if err != nil {
-		return
-	}
-	o := t.Object()
-	o.Set("require", self.require)
 	return
 }
 
@@ -67,38 +58,17 @@ func (self *JSRE) Run(code string) (otto.Value, error) {
 	return self.vm.Run(code)
 }
 
-func (self *JSRE) Require(file string) error {
-	path := ethutil.AbsolutePath(self.assetPath, file)
-	_, err := os.Stat(path)
-	if err != nil {
-		path += ".js"
-	}
-
-	fh, err := os.Open(path)
-	if err != nil {
-		return err
-	}
-
-	content, _ := ioutil.ReadAll(fh)
-	self.Run("exports = {};(function() {" + string(content) + "})();")
-
-	return nil
-}
-
 func (self *JSRE) require(call otto.FunctionCall) otto.Value {
 	file, err := call.Argument(0).ToString()
 	if err != nil {
-		return otto.UndefinedValue()
+		return otto.FalseValue()
 	}
-	if err := self.Require(file); err != nil {
+	if err := self.Load(file); err != nil {
 		fmt.Println("err:", err)
-		return otto.UndefinedValue()
+		return otto.FalseValue()
 	}
 
-	t, _ := self.vm.Get("exports")
-	fmt.Println("t: ", t)
-
-	return t
+	return otto.TrueValue()
 }
 
 func (self *JSRE) PrettyPrint(v interface{}) (val otto.Value, err error) {
