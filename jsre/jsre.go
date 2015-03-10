@@ -122,3 +122,16 @@ func (self *JSRE) toVal(v interface{}) otto.Value {
 	}
 	return result
 }
+
+func (self *JSRE) Handle(code string) (s string, err error) {
+	var val otto.Value
+	val, err = self.Run(code)
+	if err != nil {
+		return
+	}
+	val, err = self.PrettyPrint(val)
+	if err != nil {
+		return
+	}
+	return fmt.Sprintf("%v", val), nil
+}
