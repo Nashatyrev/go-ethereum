@@ -13,7 +13,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethutil"
 	"github.com/ethereum/go-ethereum/jsre"
 	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/ethereum/go-ethereum/rpc/jeth"
 	"github.com/ethereum/go-ethereum/xeth"
 )
 
@@ -48,7 +47,7 @@ func TestJEthRE(t *testing.T) {
 	jethre := jsre.New(assetPath)
 	xeth := xeth.New(ethereum, nil)
 	ethApi := rpc.NewEthereumApi(xeth, ethereum.DataDir)
-	jethre.Bind("jeth", jeth.New(ethApi, jethre.ToVal))
+	jethre.Bind("jeth", rpc.NewJeth(ethApi, jethre.ToVal))
 
 	_, err = jethre.Run(jsre.BigNumber_JS)
 

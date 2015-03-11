@@ -29,7 +29,6 @@ import (
 	"github.com/ethereum/go-ethereum/jsre"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/ethereum/go-ethereum/rpc/jeth"
 	"github.com/ethereum/go-ethereum/state"
 	"github.com/ethereum/go-ethereum/xeth"
 	"github.com/obscuren/otto"
@@ -44,7 +43,7 @@ func jethre(ethereum *eth.Ethereum) *REPL {
 	// js - xeth binding happens here
 	xeth := xeth.New(ethereum, frontend)
 	ethApi := rpc.NewEthereumApi(xeth, ethereum.DataDir)
-	re.Bind("jeth", jeth.New(ethApi, re.ToVal))
+	re.Bind("jeth", rpc.NewJeth(ethApi, re.ToVal))
 	re.Bind("eth", &ethadmin{ethereum, xeth, re.ToVal})
 
 	err := re.Load(jsre.BigNumber_JS)
