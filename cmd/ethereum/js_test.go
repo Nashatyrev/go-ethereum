@@ -12,8 +12,8 @@ import (
 	"github.com/ethereum/go-ethereum/eth"
 	"github.com/ethereum/go-ethereum/ethutil"
 	"github.com/ethereum/go-ethereum/jsre"
-	// "github.com/ethereum/go-ethereum/rpc"
-	// "github.com/ethereum/go-ethereum/rpc/jeth"
+	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/ethereum/go-ethereum/rpc/jeth"
 	"github.com/ethereum/go-ethereum/xeth"
 )
 
@@ -47,31 +47,57 @@ func TestJEthRE(t *testing.T) {
 	assetPath := path.Join(os.Getenv("GOPATH"), "src", "github.com", "ethereum", "go-ethereum", "cmd", "mist", "assets", "ext")
 	jethre := jsre.New(assetPath)
 	xeth := xeth.New(ethereum, nil)
-	// ethApi := rpc.NewEthereumApi(xeth, ethereum.DataDir)
-	//  jethre.Bind("jeth", jeth.New(ethApi, jethre.ToVal))
+	ethApi := rpc.NewEthereumApi(xeth, ethereum.DataDir)
+	jethre.Bind("jeth", jeth.New(ethApi, jethre.ToVal))
 
-	// val, err := jethre.Run("web3.eth.coinbase")
-	// if err != nil {
-	// 	t.Errorf("expected no error, got %v", err)
-	// }
+	_, err = jethre.Run(jsre.BigNumber_JS)
 
-	// pp, err := jethre.PrettyPrint(val)
-	// if err != nil {
-	// 	t.Errorf("%v", err)
-	// }
+	if err != nil {
+		t.Errorf("Error loading bignumber.js: %v", err)
+	}
 
-	// if !val.IsString() {
-	// 	t.Errorf("incorrect type, expected string, got %v: %v", val, pp)
-	// }
-	// strVal, _ := val.ToString()
-	// expected := "0x25ec29286951d5acc52a4f4d631f479c1002f97b"
-	// if strVal != expected {
-	// 	t.Errorf("incorrect result, expected %s, got %v", expected, strVal)
-	// }
+	// we need to declare a dummy setTimeout. Otto does not support it
+	_, err = jethre.Run("setTimeout = function(cb, delay) {};")
+	if err != nil {
+		t.Errorf("Error defining setTimeout: %v", err)
+	}
+
+	_, err = jethre.Run(jsre.Ethereum_JS)
+	if err != nil {
+		t.Errorf("Error loading ethereum.js: %v", err)
+	}
+
+	_, err = jethre.Run("var web3 = require('web3');")
+	if err != nil {
+		t.Errorf("Error requiring web3: %v", err)
+	}
+
+	_, err = jethre.Run("web3.setProvider(jeth)")
+	if err != nil {
+		t.Errorf("Error setting web3 provider: %v", err)
+	}
+
+	val, err := jethre.Run("web3.eth.coinbase")
+	if err != nil {
+		t.Errorf("expected no error, got %v", err)
+	}
+
+	pp, err := jethre.PrettyPrint(val)
+	if err != nil {
+		t.Errorf("%v", err)
+	}
+
+	if !val.IsString() {
+		t.Errorf("incorrect type, expected string, got %v: %v", val, pp)
+	}
+	strVal, _ := val.ToString()
+	expected := "0xe273f01c99144c438695e10f24926dc1f9fbf62d"
+	if strVal != expected {
+		t.Errorf("incorrect result, expected %s, got %v", expected, strVal)
+	}
 
 	jethre.Bind("eth", &ethadmin{ethereum, xeth, jethre.ToVal})
 
-	var val otto.Value
 	// should get current block
 	val0, err := jethre.Run("eth.dumpBlock()")
 	if err != nil {
