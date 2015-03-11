@@ -24,7 +24,8 @@ func New(ethApi *rpc.EthereumApi, toVal func(interface{}) otto.Value) *Jeth {
 
 func (self *Jeth) err(code int, msg string, id interface{}) otto.Value {
 	rpcerr := &rpc.RpcErrorObject{code, msg}
-	rpcresponse := &rpc.RpcErrorResponse{JsonRpc: jsonrpcver, ID: id, Error: rpcerr}
+	rpcresponse := &rpc.RpcErrorResponse{Jsonrpc: jsonrpcver, Id: id, Error: rpcerr}
+	// rpcresponse := &rpc.RpcErrorResponse{JsonRpc: jsonrpcver, ID: id, Error: rpcerr}
 	return self.toVal(rpcresponse)
 }
 
@@ -44,9 +45,10 @@ func (self *Jeth) Send(call otto.FunctionCall) (response otto.Value) {
 	var respif interface{}
 	err = self.ethApi.GetRequestReply(&req, &respif)
 	if err != nil {
-		return self.err(-32603, err.Error(), req.ID)
+		return self.err(-32603, err.Error(), req.Id)
 	}
-	rpcresponse := &rpc.RpcSuccessResponse{JsonRpc: jsonrpcver, ID: req.ID, Result: respif}
+	rpcresponse := &rpc.RpcSuccessResponse{Jsonrpc: jsonrpcver, Id: req.Id, Result: respif}
+	// rpcresponse := &rpc.RpcSuccessResponse{JsonRpc: jsonrpcver, ID: req.ID, Result: respif}
 	fmt.Printf("rpcresponse: %#v\n", rpcresponse)
 	response = self.toVal(rpcresponse)
 	fmt.Printf("response: %#v\n", response)

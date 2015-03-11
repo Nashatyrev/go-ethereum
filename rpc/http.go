@@ -26,14 +26,16 @@ func JSONRPC(pipe *xeth.XEth, dataDir string) http.Handler {
 
 		if req.ContentLength > maxSizeReqLength {
 			jsonerr := &RpcErrorObject{-32700, "Error: Request too large"}
-			json.Send(w, &RpcErrorResponse{JsonRpc: jsonrpcver, ID: nil, Error: jsonerr})
+			json.Send(w, &RpcErrorResponse{Jsonrpc: jsonrpcver, Id: nil, Error: jsonerr})
+			// json.Send(w, &RpcErrorResponse{JsonRpc: jsonrpcver, ID: nil, Error: jsonerr})
 			return
 		}
 
 		reqParsed, reqerr := json.ParseRequestBody(req)
 		if reqerr != nil {
 			jsonerr := &RpcErrorObject{-32700, "Error: Could not parse request"}
-			json.Send(w, &RpcErrorResponse{JsonRpc: jsonrpcver, ID: nil, Error: jsonerr})
+			json.Send(w, &RpcErrorResponse{Jsonrpc: jsonrpcver, Id: nil, Error: jsonerr})
+			// json.Send(w, &RpcErrorResponse{JsonRpc: jsonrpcver, ID: nil, Error: jsonerr})
 			return
 		}
 
@@ -42,11 +44,13 @@ func JSONRPC(pipe *xeth.XEth, dataDir string) http.Handler {
 		if reserr != nil {
 			rpchttplogger.Warnln(reserr)
 			jsonerr := &RpcErrorObject{-32603, reserr.Error()}
-			json.Send(w, &RpcErrorResponse{JsonRpc: jsonrpcver, ID: reqParsed.ID, Error: jsonerr})
+			json.Send(w, &RpcErrorResponse{Jsonrpc: jsonrpcver, Id: reqParsed.Id, Error: jsonerr})
+			// json.Send(w, &RpcErrorResponse{JsonRpc: jsonrpcver, ID: reqParsed.ID, Error: jsonerr})
 			return
 		}
 
 		rpchttplogger.DebugDetailf("Generated response: %T %s", response, response)
-		json.Send(w, &RpcSuccessResponse{JsonRpc: jsonrpcver, ID: reqParsed.ID, Result: response})
+		json.Send(w, &RpcSuccessResponse{Jsonrpc: jsonrpcver, Id: reqParsed.Id, Result: response})
+		// json.Send(w, &RpcSuccessResponse{JsonRpc: jsonrpcver, ID: reqParsed.ID, Result: response})
 	})
 }
