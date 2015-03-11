@@ -35,7 +35,7 @@ import (
 	"github.com/obscuren/otto"
 )
 
-func jethre(ethereum *eth.Ethereum) *ethutil.REPL {
+func jethre(ethereum *eth.Ethereum) *REPL {
 	re := jsre.New(assetPath)
 	repl := NewREPL(re)
 	// extend the repl to provide a console UI for xeth
@@ -81,7 +81,7 @@ func jethre(ethereum *eth.Ethereum) *ethutil.REPL {
 // we just wrap the same REPL/prompter that is used by the console
 type consoleFrontend struct {
 	ethereum *eth.Ethereum
-	*ethutil.REPL
+	*REPL
 }
 
 func (self consoleFrontend) ConfirmTransaction(tx *types.Transaction) bool {
@@ -209,7 +209,6 @@ func (self *ethadmin) DumpBlock(call otto.FunctionCall) otto.Value {
 		}
 
 	} else {
-		block = self.eth.ChainManager().CurrentBlock()
 		block = self.eth.ChainManager().CurrentBlock()
 	}
 	if block == nil {

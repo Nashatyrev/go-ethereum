@@ -1,4 +1,4 @@
-package ethutil
+package main
 
 import (
 	"bufio"
