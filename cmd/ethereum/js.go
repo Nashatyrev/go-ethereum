@@ -46,7 +46,7 @@ func jethre(ethereum *eth.Ethereum) *REPL {
 	re.Bind("jeth", rpc.NewJeth(ethApi, re.ToVal))
 	re.Bind("eth", &ethadmin{ethereum, xeth, re.ToVal})
 
-	err := re.Load(jsre.BigNumber_JS)
+	_, err := re.Run(jsre.BigNumber_JS)
 
 	if err != nil {
 		utils.Fatalf("Error loading bignumber.js: %v", err)
