@@ -1130,8 +1130,6 @@ var setupMethods = function (obj, methods) {
                 if(method.newMethod)
                     console.warn('This method is deprecated please use web3.'+ method.newMethod +'() instead.');
 
-console.log("Im here 1133");
-
                 return web3.manager.send({
                     method: call,
                     params: args,
@@ -1166,8 +1164,6 @@ var setupProperties = function (obj, properties) {
             if(property.newProperty)
                 console.warn('This property is deprecated please use web3.'+ property.newProperty +' instead.');
 
-console.log("Im here 1169");
-
             return web3.manager.send({
                 method: property.getter,
                 outputFormatter: property.outputFormatter
@@ -1180,7 +1176,6 @@ console.log("Im here 1169");
                 // show deprecated warning
                 if(property.newProperty)
                     console.warn('This property is deprecated please use web3.'+ property.newProperty +' instead.');
-console.log("Im here 1183");
 
                 return web3.manager.send({
                     method: property.setter,
@@ -2607,8 +2602,6 @@ var requestManager = function() {
         // SYNC
         } else {
             var result = provider.send(payload);
-console.log("result: ")
-console.log(result.result)
             if (!jsonrpc.isValidResponse(result)) {
                 console.log(result);
                 if(typeof result === 'object' && result.error && result.error.message)
