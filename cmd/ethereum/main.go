@@ -21,6 +21,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"path"
@@ -29,16 +30,14 @@ import (
 	"time"
 
 	"github.com/codegangsta/cli"
+	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/eth"
 	"github.com/ethereum/go-ethereum/ethutil"
-	"github.com/ethereum/go-ethereum/jsre"
 	"github.com/ethereum/go-ethereum/logger"
-	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/ethereum/go-ethereum/rpc/jeth"
 	"github.com/ethereum/go-ethereum/state"
-	"github.com/ethereum/go-ethereum/xeth"
+	"github.com/peterh/liner"
 )
 
 const (
@@ -48,12 +47,10 @@ const (
 
 var (
 	clilogger = logger.NewLogger("CLI")
-	app       = cli.NewApp()
+	app       = utils.NewApp(Version, "the go-ethereum command line interface")
 )
 
 func init() {
-	app.Version = Version
-	app.Usage = "the go-ethereum command-line client"
 	app.Action = run
 	app.HideVersion = true // we have a command to print the version
 	app.Commands = []cli.Command{
@@ -64,6 +61,23 @@ func init() {
 			Description: `
 The output of this command is supposed to be machine-readable.
 `,
+		},
+		{
+			Action: accountList,
+			Name:   "account",
+			Usage:  "manage accounts",
+			Subcommands: []cli.Command{
+				{
+					Action: accountList,
+					Name:   "list",
+					Usage:  "print account addresses",
+				},
+				{
+					Action: accountCreate,
+					Name:   "new",
+					Usage:  "create a new account",
+				},
+			},
 		},
 		{
 			Action: dump,
@@ -92,14 +106,15 @@ runtime will execute the file and exit.
 			Name:   "import",
 			Usage:  `import a blockchain file`,
 		},
+		{
+			Action: exportchain,
+			Name:   "export",
+			Usage:  `export blockchain into file`,
+		},
 	}
-	app.Author = ""
-	app.Email = ""
 	app.Flags = []cli.Flag{
 		utils.BootnodesFlag,
 		utils.DataDirFlag,
-		utils.KeyRingFlag,
-		utils.KeyStoreFlag,
 		utils.ListenPortFlag,
 		utils.LogFileFlag,
 		utils.LogFormatFlag,
@@ -140,61 +155,126 @@ func main() {
 func run(ctx *cli.Context) {
 	fmt.Printf("Welcome to the FRONTIER\n")
 	utils.HandleInterrupt()
-	eth := utils.GetEthereum(ClientIdentifier, Version, ctx)
+	eth, err := utils.GetEthereum(ClientIdentifier, Version, ctx)
+	if err == accounts.ErrNoKeys {
+		utils.Fatalf(`No accounts configured.
+Please run 'ethereum account new' to create a new account.`)
+	} else if err != nil {
+		utils.Fatalf("%v", err)
+	}
+
 	startEth(ctx, eth)
 	// this blocks the thread
 	eth.WaitForShutdown()
 }
 
+var assetPath = path.Join(os.Getenv("GOPATH"), "src", "github.com", "ethereum", "go-ethereum", "cmd", "mist", "assets", "ext")
+
 func runjs(ctx *cli.Context) {
-	eth := utils.GetEthereum(ClientIdentifier, Version, ctx)
-	startEth(ctx, eth)
-	if len(ctx.Args()) == 0 {
-		runREPL(eth)
-		eth.Stop()
-		eth.WaitForShutdown()
-	} else if len(ctx.Args()) == 1 {
-		execJsFile(eth, ctx.Args()[0])
-	} else {
-		utils.Fatalf("This command can handle at most one argument.")
+	eth, err := utils.GetEthereum(ClientIdentifier, Version, ctx)
+	if err == accounts.ErrNoKeys {
+		utils.Fatalf(`No accounts configured.
+Please run 'ethereum account new' to create a new account.`)
+	} else if err != nil {
+		utils.Fatalf("%v", err)
 	}
+
+	startEth(ctx, eth)
+	repl := jethre(eth)
+	if len(ctx.Args()) == 0 {
+		repl.Interactive("> ", path.Join(eth.DataDir, "repl.history"))
+	} else {
+		for _, file := range ctx.Args() {
+			if err := repl.Exec(file); err != nil {
+				utils.Fatalf("Error running '%s': %v", file, err)
+			}
+		}
+	}
+	eth.Stop()
+	eth.WaitForShutdown()
 }
 
 func startEth(ctx *cli.Context, eth *eth.Ethereum) {
 	utils.StartEthereum(eth)
+	// Start auxiliary services if enabled.
 	if ctx.GlobalBool(utils.RPCEnabledFlag.Name) {
-		addr := ctx.GlobalString(utils.RPCListenAddrFlag.Name)
-		port := ctx.GlobalInt(utils.RPCPortFlag.Name)
-		utils.StartRpc(eth, addr, port)
+		utils.StartRPC(eth, ctx)
 	}
 	if ctx.GlobalBool(utils.MiningEnabledFlag.Name) {
 		eth.Miner().Start()
 	}
 }
 
+func accountList(ctx *cli.Context) {
+	am := utils.GetAccountManager(ctx)
+	accts, err := am.Accounts()
+	if err != nil {
+		utils.Fatalf("Could not list accounts: %v", err)
+	}
+	for _, acct := range accts {
+		fmt.Printf("Address: %#x\n", acct)
+	}
+}
+
+func accountCreate(ctx *cli.Context) {
+	am := utils.GetAccountManager(ctx)
+	fmt.Println("The new account will be encrypted with a passphrase.")
+	fmt.Println("Please enter a passphrase now.")
+	auth, err := readPassword("Passphrase: ", true)
+	if err != nil {
+		utils.Fatalf("%v", err)
+	}
+	confirm, err := readPassword("Repeat Passphrase: ", false)
+	if err != nil {
+		utils.Fatalf("%v", err)
+	}
+	if auth != confirm {
+		utils.Fatalf("Passphrases did not match.")
+	}
+	acct, err := am.NewAccount(auth)
+	if err != nil {
+		utils.Fatalf("Could not create the account: %v", err)
+	}
+	fmt.Printf("Address: %#x\n", acct.Address)
+}
+
 func importchain(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
 		utils.Fatalf("This command requires an argument.")
 	}
-	chain, _, _ := utils.GetChain(ctx)
+	chainmgr, _, _ := utils.GetChain(ctx)
 	start := time.Now()
-	err := utils.ImportChain(chain, ctx.Args().First())
+	err := utils.ImportChain(chainmgr, ctx.Args().First())
 	if err != nil {
 		utils.Fatalf("Import error: %v\n", err)
 	}
-	fmt.Printf("Import done in", time.Since(start))
+	fmt.Printf("Import done in %v", time.Since(start))
+	return
+}
+
+func exportchain(ctx *cli.Context) {
+	if len(ctx.Args()) != 1 {
+		utils.Fatalf("This command requires an argument.")
+	}
+	chainmgr, _, _ := utils.GetChain(ctx)
+	start := time.Now()
+	err := utils.ExportChain(chainmgr, ctx.Args().First())
+	if err != nil {
+		utils.Fatalf("Export error: %v\n", err)
+	}
+	fmt.Printf("Export done in %v", time.Since(start))
 	return
 }
 
 func dump(ctx *cli.Context) {
-	chain, _, stateDb := utils.GetChain(ctx)
+	chainmgr, _, stateDb := utils.GetChain(ctx)
 	for _, arg := range ctx.Args() {
 		var block *types.Block
 		if hashish(arg) {
-			block = chain.GetBlock(ethutil.Hex2Bytes(arg))
+			block = chainmgr.GetBlock(ethutil.Hex2Bytes(arg))
 		} else {
 			num, _ := strconv.Atoi(arg)
-			block = chain.GetBlockByNumber(uint64(num))
+			block = chainmgr.GetBlockByNumber(uint64(num))
 		}
 		if block == nil {
 			fmt.Println("{}")
@@ -207,70 +287,35 @@ func dump(ctx *cli.Context) {
 	}
 }
 
+func version(c *cli.Context) {
+	fmt.Printf(`%v
+Version: %v
+Protocol Version: %d
+Network Id: %d
+GO: %s
+OS: %s
+GOPATH=%s
+GOROOT=%s
+`, ClientIdentifier, Version, eth.ProtocolVersion, eth.NetworkId, runtime.Version(), runtime.GOOS, os.Getenv("GOPATH"), runtime.GOROOT())
+}
+
 // hashish returns true for strings that look like hashes.
 func hashish(x string) bool {
 	_, err := strconv.Atoi(x)
 	return err != nil
 }
 
-func version(c *cli.Context) {
-	fmt.Printf(`%v %v
-PV=%d
-GOOS=%s
-GO=%s
-GOPATH=%s
-GOROOT=%s
-`, ClientIdentifier, Version, eth.ProtocolVersion, runtime.GOOS, runtime.Version(), os.Getenv("GOPATH"), runtime.GOROOT())
-}
-
-var assetPath = path.Join(os.Getenv("GOPATH"), "src", "github.com", "ethereum", "go-ethereum", "cmd", "mist", "assets", "ext")
-
-func jethre(ethereum *eth.Ethereum) *jsre.JSRE {
-	re := jsre.New(assetPath)
-	xeth := xeth.New(ethereum, nil)
-	ethApi := rpc.NewEthereumApi(xeth)
-	re.Bind("jeth", jeth.New(ethApi, re.ToVal))
-
-	err := re.Load("bignumber.min.js")
-
-	if err != nil {
-		utils.Fatalf("Error loading bignumber.js: %v", err)
+func readPassword(prompt string, warnTerm bool) (string, error) {
+	if liner.TerminalSupported() {
+		lr := liner.NewLiner()
+		defer lr.Close()
+		return lr.PasswordPrompt(prompt)
 	}
-
-	_, err = re.Run("setTimeout = function(cb, delay) {};")
-	if err != nil {
-		utils.Fatalf("Error defining setTimeout: %v", err)
+	if warnTerm {
+		fmt.Println("!! Unsupported terminal, password will be echoed.")
 	}
-
-	_, err = re.Run(jsre.Ethereum_JS)
-	if err != nil {
-		utils.Fatalf("Error loading ethereum.js: %v", err)
-	}
-
-	_, err = re.Run("var web3 = require('web3');")
-	if err != nil {
-		utils.Fatalf("Error requiring web3: %v", err)
-	}
-
-	_, err = re.Run("web3.setProvider(jeth)")
-	if err != nil {
-		utils.Fatalf("Error setting web3 provider: %v", err)
-	}
-	// _, err = re.Run(`jeth.send = function (payload) {o=jeth.jeth(payload);return(o);};`)
-	// if err != nil {
-	// 	utils.Fatalf("Error setting jeth.Send provider: %v", err)
-	// }
-	return re
-}
-
-func execJsFile(ethereum *eth.Ethereum, filename string) {
-	re := jethre(ethereum)
-	if err := re.Load(filename); err != nil {
-		utils.Fatalf("Javascript Error: %v", err)
-	}
-}
-
-func runREPL(ethereum *eth.Ethereum) {
-	re := jethre(ethereum)
-	ethutil.RunREPL(path.Join(ethereum.DataDir, "repl.history"), re)
+	fmt.Print(prompt)
+	input, err := bufio.NewReader(os.Stdin).ReadString('\n')
+	fmt.Println()
+	return input, err
 }
