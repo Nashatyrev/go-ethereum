@@ -24,7 +24,11 @@ func TestJEthRE(t *testing.T) {
 		t.Errorf("%v", err)
 		return
 	}
-
+	err = os.MkdirAll("/tmp/eth/data", os.ModePerm)
+	if err != nil {
+		t.Errorf("%v", err)
+		return
+	}
 	// FIXME: this does not work ATM
 	ks := crypto.NewKeyStorePlain("/tmp/eth/keys")
 	ethutil.WriteFile("/tmp/eth/keys/e273f01c99144c438695e10f24926dc1f9fbf62d/e273f01c99144c438695e10f24926dc1f9fbf62d",
@@ -84,7 +88,8 @@ func TestJEthRE(t *testing.T) {
 	}
 
 	ethereum, err = eth.New(&eth.Config{
-		DataDir: "/tmp/eth1",
+		DataDir:        "/tmp/eth1",
+		AccountManager: accounts.NewManager(ks),
 	})
 	val, err = jethre.Run("eth.import(\"" + fn + "\")")
 	if err != nil {
