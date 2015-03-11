@@ -37,7 +37,7 @@ import (
 
 func jethre(ethereum *eth.Ethereum) *ethutil.REPL {
 	re := jsre.New(assetPath)
-	repl := ethutil.NewREPL(re)
+	repl := NewREPL(re)
 	// extend the repl to provide a console UI for xeth
 	frontend := consoleFrontend{ethereum, repl}
 
@@ -47,7 +47,7 @@ func jethre(ethereum *eth.Ethereum) *ethutil.REPL {
 	re.Bind("jeth", jeth.New(ethApi, re.ToVal))
 	re.Bind("eth", &ethadmin{ethereum, xeth, re.ToVal})
 
-	err := re.Load("bignumber.min.js")
+	err := re.Load(jsre.BigNumber_JS)
 
 	if err != nil {
 		utils.Fatalf("Error loading bignumber.js: %v", err)
@@ -222,81 +222,3 @@ func (self *ethadmin) DumpBlock(call otto.FunctionCall) otto.Value {
 	return self.toVal(dump)
 
 }
-
-// /*
-//  * The following methods are natively implemented javascript functions.
-//  */
-
-// func (self *jsre) dump(call otto.FunctionCall) otto.Value {
-// 	var block *types.Block
-
-// 	if len(call.ArgumentList) > 0 {
-// 		if call.Argument(0).IsNumber() {
-// 			num, _ := call.Argument(0).ToInteger()
-// 			block = self.ethereum.ChainManager().GetBlockByNumber(uint64(num))
-// 		} else if call.Argument(0).IsString() {
-// 			hash, _ := call.Argument(0).ToString()
-// 			block = self.ethereum.ChainManager().GetBlock(ethutil.Hex2Bytes(hash))
-// 		} else {
-// 			fmt.Println("invalid argument for dump. Either hex string or number")
-// 		}
-
-// 		if block == nil {
-// 			fmt.Println("block not found")
-
-// 			return otto.UndefinedValue()
-// 		}
-
-// 	} else {
-// 		block = self.ethereum.ChainManager().CurrentBlock()
-// 	}
-
-// 	statedb := state.New(block.Root(), self.ethereum.StateDb())
-
-// 	v, _ := self.re.Vm.ToValue(statedb.RawDump())
-
-// 	return v
-// }
-
-// func (self *jsre) stopMining(call otto.FunctionCall) otto.Value {
-// 	self.xeth.Miner().Stop()
-// 	return otto.TrueValue()
-// }
-
-// func (self *jsre) startMining(call otto.FunctionCall) otto.Value {
-// 	self.xeth.Miner().Start()
-// 	return otto.TrueValue()
-// }
-
-// func (self *jsre) connect(call otto.FunctionCall) otto.Value {
-// 	nodeURL, err := call.Argument(0).ToString()
-// 	if err != nil {
-// 		return otto.FalseValue()
-// 	}
-// 	if err := self.ethereum.SuggestPeer(nodeURL); err != nil {
-// 		return otto.FalseValue()
-// 	}
-// 	return otto.TrueValue()
-// }
-
-// func (self *jsre) export(call otto.FunctionCall) otto.Value {
-// 	if len(call.ArgumentList) == 0 {
-// 		fmt.Println("err: require file name")
-// 		return otto.FalseValue()
-// 	}
-
-// 	fn, err := call.Argument(0).ToString()
-// 	if err != nil {
-// 		fmt.Println(err)
-// 		return otto.FalseValue()
-// 	}
-
-// 	data := self.ethereum.ChainManager().Export()
-
-// 	if err := ethutil.WriteFile(fn, data); err != nil {
-// 		fmt.Println(err)
-// 		return otto.FalseValue()
-// 	}
-
-// 	return otto.TrueValue()
-// }
