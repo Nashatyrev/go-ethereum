@@ -33,13 +33,13 @@ func (self *Jeth) Send(call otto.FunctionCall) (response otto.Value) {
 	if err != nil {
 		return self.err(-32700, err.Error(), nil)
 	}
-	fmt.Printf("reqif: %#v", reqif)
+	fmt.Printf("reqif: %#v\n", reqif)
 
 	jsonreq, err := json.Marshal(reqif)
 
 	var req rpc.RpcRequest
 	err = json.Unmarshal(jsonreq, &req)
-	fmt.Printf("req: %#v", req)
+	fmt.Printf("req: %#v\n", req)
 
 	var respif interface{}
 	err = self.ethApi.GetRequestReply(&req, &respif)
@@ -47,8 +47,8 @@ func (self *Jeth) Send(call otto.FunctionCall) (response otto.Value) {
 		return self.err(-32603, err.Error(), req.ID)
 	}
 	rpcresponse := &rpc.RpcSuccessResponse{JsonRpc: jsonrpcver, ID: req.ID, Result: respif}
-	fmt.Printf("rpcresponse: %#v", rpcresponse)
+	fmt.Printf("rpcresponse: %#v\n", rpcresponse)
 	response = self.toVal(rpcresponse)
-	fmt.Printf("response: %#v", response)
+	fmt.Printf("response: %#v\n", response)
 	return
 }
