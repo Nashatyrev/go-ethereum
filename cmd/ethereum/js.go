@@ -19,6 +19,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/cmd/utils"
@@ -26,9 +27,12 @@ import (
 	"github.com/ethereum/go-ethereum/eth"
 	"github.com/ethereum/go-ethereum/ethutil"
 	"github.com/ethereum/go-ethereum/jsre"
+	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethereum/go-ethereum/rpc/jeth"
+	"github.com/ethereum/go-ethereum/state"
 	"github.com/ethereum/go-ethereum/xeth"
+	"github.com/obscuren/otto"
 )
 
 func jethre(ethereum *eth.Ethereum) *ethutil.REPL {
@@ -41,6 +45,7 @@ func jethre(ethereum *eth.Ethereum) *ethutil.REPL {
 	xeth := xeth.New(ethereum, frontend)
 	ethApi := rpc.NewEthereumApi(xeth, ethereum.DataDir)
 	re.Bind("jeth", jeth.New(ethApi, re.ToVal))
+	re.Bind("eth", &ethadmin{ethereum, xeth, re.ToVal})
 
 	err := re.Load("bignumber.min.js")
 
@@ -100,15 +105,123 @@ func (self consoleFrontend) UnlockAccount(addr []byte) bool {
 	}
 }
 
-// func (self *jsre) initStdFuncs() {
-// 	t, _ := self.re.Vm.Get("eth")
-// 	eth := t.Object()
-// 	eth.Set("connect", self.connect)
-// 	eth.Set("stopMining", self.stopMining)
-// 	eth.Set("startMining", self.startMining)
-// 	eth.Set("dump", self.dump)
-// 	eth.Set("export", self.export)
-// }
+// the ethereum client admin task bindings for js
+type ethadmin struct {
+	eth   *eth.Ethereum
+	xeth  *xeth.XEth
+	toVal func(interface{}) otto.Value
+}
+
+func (self *ethadmin) IsMining(call otto.FunctionCall) otto.Value {
+	return self.toVal(self.xeth.IsMining())
+}
+
+func (self *ethadmin) SetMining(call otto.FunctionCall) otto.Value {
+	shouldmine, err := call.Argument(0).ToBoolean()
+	if err != nil {
+		fmt.Println(err)
+		return otto.UndefinedValue()
+	}
+	mining := self.xeth.SetMining(shouldmine)
+	return self.toVal(mining)
+}
+
+func (self *ethadmin) SuggestPeer(call otto.FunctionCall) otto.Value {
+	nodeURL, err := call.Argument(0).ToString()
+	if err != nil {
+		fmt.Println(err)
+		return otto.FalseValue()
+	}
+	if err := self.eth.SuggestPeer(nodeURL); err != nil {
+		fmt.Println(err)
+		return otto.FalseValue()
+	}
+	return otto.TrueValue()
+}
+
+func (self *ethadmin) Import(call otto.FunctionCall) otto.Value {
+	if len(call.ArgumentList) == 0 {
+		fmt.Println("err: require file name")
+		return otto.FalseValue()
+	}
+
+	fn, err := call.Argument(0).ToString()
+	if err != nil {
+		fmt.Println(err)
+		return otto.FalseValue()
+	}
+
+	var fh *os.File
+	fh, err = os.OpenFile(fn, os.O_RDONLY, os.ModePerm)
+	if err != nil {
+		fmt.Println(err)
+		return otto.FalseValue()
+	}
+	defer fh.Close()
+
+	var blocks types.Blocks
+	if err = rlp.Decode(fh, &blocks); err != nil {
+		fmt.Println(err)
+		return otto.FalseValue()
+	}
+
+	self.eth.ChainManager().Reset()
+	if err = self.eth.ChainManager().InsertChain(blocks); err != nil {
+		fmt.Println(err)
+		return otto.FalseValue()
+	}
+
+	return otto.TrueValue()
+}
+
+func (self *ethadmin) Export(call otto.FunctionCall) otto.Value {
+	if len(call.ArgumentList) == 0 {
+		fmt.Println("err: require file name")
+		return otto.FalseValue()
+	}
+
+	fn, err := call.Argument(0).ToString()
+	if err != nil {
+		fmt.Println(err)
+		return otto.FalseValue()
+	}
+
+	data := self.eth.ChainManager().Export()
+	if err := ethutil.WriteFile(fn, data); err != nil {
+		fmt.Println(err)
+		return otto.FalseValue()
+	}
+
+	return otto.TrueValue()
+}
+
+func (self *ethadmin) DumpBlock(call otto.FunctionCall) otto.Value {
+	var block *types.Block
+	if len(call.ArgumentList) > 0 {
+		if call.Argument(0).IsNumber() {
+			num, _ := call.Argument(0).ToInteger()
+			block = self.eth.ChainManager().GetBlockByNumber(uint64(num))
+		} else if call.Argument(0).IsString() {
+			hash, _ := call.Argument(0).ToString()
+			block = self.eth.ChainManager().GetBlock(ethutil.Hex2Bytes(hash))
+		} else {
+			fmt.Println("invalid argument for dump. Either hex string or number")
+		}
+
+	} else {
+		block = self.eth.ChainManager().CurrentBlock()
+		block = self.eth.ChainManager().CurrentBlock()
+	}
+	if block == nil {
+		fmt.Println("block not found")
+		return otto.UndefinedValue()
+	}
+
+	statedb := state.New(block.Root(), self.eth.StateDb())
+	dump := statedb.RawDump()
+	return self.toVal(dump)
+
+}
 
 // /*
 //  * The following methods are natively implemented javascript functions.
