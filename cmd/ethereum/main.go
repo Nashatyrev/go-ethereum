@@ -225,39 +225,52 @@ GOROOT=%s
 
 var assetPath = path.Join(os.Getenv("GOPATH"), "src", "github.com", "ethereum", "go-ethereum", "cmd", "mist", "assets", "ext")
 
-func execJsFile(ethereum *eth.Ethereum, filename string) {
+func jethre(ethereum *eth.Ethereum) *jsre.JSRE {
 	re := jsre.New(assetPath)
-	// re.Bind("eth", ...)
+	xeth := xeth.New(ethereum, nil)
+	ethApi := rpc.NewEthereumApi(xeth)
+	re.Bind("jeth", jeth.New(ethApi, re.ToVal))
 
+	err := re.Load("bignumber.min.js")
+
+	if err != nil {
+		utils.Fatalf("Error loading bignumber.js: %v", err)
+	}
+
+	_, err = re.Run("setTimeout = function(cb, delay) {};")
+	if err != nil {
+		utils.Fatalf("Error defining setTimeout: %v", err)
+	}
+
+	_, err = re.Run(jsre.Ethereum_JS)
+	if err != nil {
+		utils.Fatalf("Error loading ethereum.js: %v", err)
+	}
+
+	_, err = re.Run("var web3 = require('web3');")
+	if err != nil {
+		utils.Fatalf("Error requiring web3: %v", err)
+	}
+
+	_, err = re.Run("web3.setProvider(jeth)")
+	if err != nil {
+		utils.Fatalf("Error setting web3 provider: %v", err)
+	}
+	// _, err = re.Run(`jeth.send = function (payload) {o=jeth.jeth(payload);return(o);};`)
+	// if err != nil {
+	// 	utils.Fatalf("Error setting jeth.Send provider: %v", err)
+	// }
+	return re
+}
+
+func execJsFile(ethereum *eth.Ethereum, filename string) {
+	re := jethre(ethereum)
 	if err := re.Load(filename); err != nil {
 		utils.Fatalf("Javascript Error: %v", err)
 	}
 }
 
 func runREPL(ethereum *eth.Ethereum) {
-	re := jsre.New(assetPath)
-	xeth := xeth.New(ethereum, nil)
-	ethApi := rpc.NewEthereumApi(xeth)
-	re.Bind("jeth", jeth.New(ethApi, re.ToVal))
-	err := re.Load("bignumber.min.js")
-	if err != nil {
-		utils.Fatalf("Error loading bignumber.js: %v", err)
-	}
-	_, err = re.Run("setTimeout = function(cb, delay) {};")
-	if err != nil {
-		utils.Fatalf("Error defining setTimeout: %v", err)
-	}
-	_, err = re.Run(jsre.Ethereum_JS)
-	if err != nil {
-		utils.Fatalf("Error loading ethereum.js: %v", err)
-	}
-	_, err = re.Run("var web3 = require('web3');")
-	if err != nil {
-		utils.Fatalf("Error requiring web3: %v", err)
-	}
-	_, err = re.Run("web3.setProvider(jeth)")
-	if err != nil {
-		utils.Fatalf("Error setting provider: %v", err)
-	}
+	re := jethre(ethereum)
 	ethutil.RunREPL(path.Join(ethereum.DataDir, "repl.history"), re)
 }
