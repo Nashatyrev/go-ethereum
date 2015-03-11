@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"os/signal"
 	"strings"
 
 	"github.com/peterh/liner"
@@ -12,6 +11,7 @@ import (
 
 type REPLbackend interface {
 	Handle(string) (string, error)
+	Load(string) error
 }
 
 /*
@@ -20,28 +20,95 @@ REPL is a generic console for interactive sessions
  REPL passes user input to a backend (e.g., javascript runtime environment)
  implementing the REPLbackend interface
 */
-type REPL struct {
-	re      REPLbackend
-	prompt  string
-	lr      *liner.State
-	history string
+type prompter interface {
+	Prompt(p string) (string, error)
+	PasswordPrompt(p string) (string, error)
 }
 
-func RunREPL(history string, re REPLbackend) {
-	repl := &REPL{
-		re:      re,
-		history: history,
-		prompt:  "> ",
+type dumbterm struct{ r *bufio.Reader }
+
+func (r dumbterm) Prompt(p string) (string, error) {
+	fmt.Print(p)
+	return r.r.ReadString('\n')
+}
+
+func (r dumbterm) PasswordPrompt(p string) (string, error) {
+	fmt.Println("!! Unsupported terminal, password will echo.")
+	fmt.Print(p)
+	input, err := bufio.NewReader(os.Stdin).ReadString('\n')
+	fmt.Println()
+	return input, err
+}
+
+type REPL struct {
+	backend REPLbackend
+	prompter
+	prompt  string
+	ps1     string
+	history string
+	update  func(string)
+	init    func()
+	close   func()
+}
+
+func NewREPL(re REPLbackend) (self *REPL) {
+	self = &REPL{
+		backend: re,
 	}
 	if !liner.TerminalSupported() {
-		repl.dumbRead()
+		self.prompter = dumbterm{bufio.NewReader(os.Stdin)}
 	} else {
 		lr := liner.NewLiner()
-		defer lr.Close()
 		lr.SetCtrlCAborts(true)
-		repl.withHistory(func(hist *os.File) { lr.ReadHistory(hist) })
-		repl.read(lr)
-		repl.withHistory(func(hist *os.File) { hist.Truncate(0); lr.WriteHistory(hist) })
+		self.prompter = lr
+		self.update = func(input string) { lr.AppendHistory(input) }
+		self.init = func() {
+			self.withHistory(func(hist *os.File) { lr.ReadHistory(hist) })
+		}
+		self.close = func() {
+			self.withHistory(func(hist *os.File) {
+				hist.Truncate(0)
+				lr.WriteHistory(hist)
+			})
+			lr.Close()
+		}
+	}
+	return
+}
+
+func (self *REPL) Exec(filename string) error {
+	return self.backend.Load(filename)
+}
+
+func (self *REPL) Interactive(prompt, history string) {
+	self.prompt = prompt
+	self.ps1 = prompt
+	self.history = history
+	if self.init != nil {
+		self.init()
+	}
+	for {
+		input, err := self.Prompt(self.ps1)
+		if err != nil {
+			break
+		}
+		if input == "" {
+			continue
+		}
+		str += input + "\n"
+		self.setIndent()
+		if indentCount <= 0 {
+			if input == "exit" {
+				break
+			}
+			hist := str[:len(str)-1]
+			self.update(hist)
+			self.parseInput(str)
+			str = ""
+		}
+	}
+	if self.close != nil {
+		self.close()
 	}
 }
 
@@ -61,7 +128,7 @@ func (self *REPL) parseInput(code string) {
 			fmt.Println("[native] error", r)
 		}
 	}()
-	val, err := self.re.Handle(code)
+	val, err := self.backend.Handle(code)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -79,67 +146,9 @@ func (self *REPL) setIndent() {
 	closed += strings.Count(str, ")")
 	indentCount = open - closed
 	if indentCount <= 0 {
-		self.prompt = "> "
+		self.ps1 = self.prompt
 	} else {
-		self.prompt = strings.Join(make([]string, indentCount*2), "..")
-		self.prompt += " "
-	}
-}
-
-func (self *REPL) read(lr *liner.State) {
-	for {
-		input, err := lr.Prompt(self.prompt)
-		if err != nil {
-			return
-		}
-		if input == "" {
-			continue
-		}
-		str += input + "\n"
-		self.setIndent()
-		if indentCount <= 0 {
-			if input == "exit" {
-				return
-			}
-			hist := str[:len(str)-1]
-			lr.AppendHistory(hist)
-			self.parseInput(str)
-			str = ""
-		}
-	}
-}
-
-func (self *REPL) dumbRead() {
-	fmt.Println("Unsupported terminal, line editing will not work.")
-
-	// process lines
-	readDone := make(chan struct{})
-	go func() {
-		r := bufio.NewReader(os.Stdin)
-	loop:
-		for {
-			fmt.Print(self.prompt)
-			line, err := r.ReadString('\n')
-			switch {
-			case err != nil || line == "exit":
-				break loop
-			case line == "":
-				continue
-			default:
-				self.parseInput(line + "\n")
-			}
-		}
-		close(readDone)
-	}()
-
-	// wait for Ctrl-C
-	sigc := make(chan os.Signal, 1)
-	signal.Notify(sigc, os.Interrupt, os.Kill)
-	defer signal.Stop(sigc)
-
-	select {
-	case <-readDone:
-	case <-sigc:
-		os.Stdin.Close() // terminate read
+		self.ps1 = strings.Join(make([]string, indentCount*2), "..")
+		self.ps1 += " "
 	}
 }
