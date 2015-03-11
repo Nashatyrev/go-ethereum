@@ -2,7 +2,7 @@ package rpc
 
 import (
 	"encoding/json"
-	"fmt"
+	// "fmt"
 	"github.com/obscuren/otto"
 )
 
@@ -26,13 +26,13 @@ func (self *Jeth) Send(call otto.FunctionCall) (response otto.Value) {
 	if err != nil {
 		return self.err(-32700, err.Error(), nil)
 	}
-	fmt.Printf("reqif: %#v\n", reqif)
+	// fmt.Printf("reqif: %#v\n", reqif)
 
 	jsonreq, err := json.Marshal(reqif)
 
 	var req RpcRequest
 	err = json.Unmarshal(jsonreq, &req)
-	fmt.Printf("req: %#v\n", req)
+	// fmt.Printf("req: %#v\n", req)
 
 	var respif interface{}
 	err = self.ethApi.GetRequestReply(&req, &respif)
@@ -40,8 +40,8 @@ func (self *Jeth) Send(call otto.FunctionCall) (response otto.Value) {
 		return self.err(-32603, err.Error(), req.Id)
 	}
 	rpcresponse := &RpcSuccessResponse{Jsonrpc: jsonrpcver, Id: req.Id, Result: respif}
-	fmt.Printf("rpcresponse: %#v\n", rpcresponse)
+	// fmt.Printf("rpcresponse: %#v\n", rpcresponse)
 	response = self.toVal(rpcresponse)
-	fmt.Printf("response: %#v\n", response)
+	// fmt.Printf("response: %#v\n", response)
 	return
 }
