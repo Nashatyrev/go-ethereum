@@ -2617,8 +2617,7 @@ console.log(result.result)
             }
 
             // format the output
-            // return (typeof data.outputFormatter === 'function') ? data.outputFormatter(result.result) : result.result;
-            return (result.result);
+            return (typeof data.outputFormatter === 'function') ? data.outputFormatter(result.result) : result.result;
         }
 
     };
