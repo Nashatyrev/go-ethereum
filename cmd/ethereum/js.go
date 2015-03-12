@@ -125,7 +125,7 @@ func (self *ethadmin) SetMining(call otto.FunctionCall) otto.Value {
 	return self.toVal(mining)
 }
 
-func (self *ethadmin) SuggestPeer(call otto.FunctionCall) otto.Value {
+func (self *ethadmin) AddPeer(call otto.FunctionCall) otto.Value {
 	nodeURL, err := call.Argument(0).ToString()
 	if err != nil {
 		fmt.Println(err)
