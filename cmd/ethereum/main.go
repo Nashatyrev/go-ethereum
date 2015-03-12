@@ -24,7 +24,6 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"path"
 	"runtime"
 	"strconv"
 	"strings"
@@ -167,8 +166,6 @@ func run(ctx *cli.Context) {
 	eth.WaitForShutdown()
 }
 
-var assetPath = path.Join(os.Getenv("GOPATH"), "src", "github.com", "ethereum", "go-ethereum", "cmd", "mist", "assets", "ext")
-
 func runjs(ctx *cli.Context) {
 	eth, err := utils.GetEthereum(ClientIdentifier, Version, ctx)
 	if err != nil {
@@ -176,14 +173,13 @@ func runjs(ctx *cli.Context) {
 	}
 
 	startEth(ctx, eth)
-	repl := jethre(eth)
+	// repl := newJSRE(eth, ctx.GlobalString(utils.JSlibPathFlag.Name))
+	repl := newJSRE(eth, "/tmp")
 	if len(ctx.Args()) == 0 {
-		repl.Interactive("> ", path.Join(eth.DataDir, "repl.history"))
+		repl.interactive()
 	} else {
 		for _, file := range ctx.Args() {
-			if err := repl.Exec(file); err != nil {
-				utils.Fatalf("Error running '%s': %v", file, err)
-			}
+			repl.exec(file)
 		}
 	}
 	eth.Stop()

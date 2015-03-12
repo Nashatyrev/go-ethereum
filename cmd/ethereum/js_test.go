@@ -11,9 +11,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth"
 	"github.com/ethereum/go-ethereum/ethutil"
-	"github.com/ethereum/go-ethereum/jsre"
-	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/ethereum/go-ethereum/xeth"
 )
 
 func TestJEthRE(t *testing.T) {
@@ -44,45 +41,14 @@ func TestJEthRE(t *testing.T) {
 	}
 
 	assetPath := path.Join(os.Getenv("GOPATH"), "src", "github.com", "ethereum", "go-ethereum", "cmd", "mist", "assets", "ext")
-	jethre := jsre.New(assetPath)
-	xeth := xeth.New(ethereum, nil)
-	ethApi := rpc.NewEthereumApi(xeth, ethereum.DataDir)
-	jethre.Bind("jeth", rpc.NewJeth(ethApi, jethre.ToVal))
-	jethre.Bind("admin", &ethadmin{ethereum, xeth, jethre.ToVal})
+	repl := newJSRE(ethereum, assetPath)
 
-	_, err = jethre.Run(jsre.BigNumber_JS)
-
-	if err != nil {
-		t.Errorf("Error loading bignumber.js: %v", err)
-	}
-
-	// we need to declare a dummy setTimeout. Otto does not support it
-	_, err = jethre.Run("setTimeout = function(cb, delay) {};")
-	if err != nil {
-		t.Errorf("Error defining setTimeout: %v", err)
-	}
-
-	_, err = jethre.Run(jsre.Ethereum_JS)
-	if err != nil {
-		t.Errorf("Error loading ethereum.js: %v", err)
-	}
-
-	_, err = jethre.Run("var web3 = require('web3');")
-	if err != nil {
-		t.Errorf("Error requiring web3: %v", err)
-	}
-
-	_, err = jethre.Run("web3.setProvider(jeth)")
-	if err != nil {
-		t.Errorf("Error setting web3 provider: %v", err)
-	}
-
-	val, err := jethre.Run("web3.eth.coinbase")
+	val, err := repl.re.Run("web3.eth.coinbase")
 	if err != nil {
 		t.Errorf("expected no error, got %v", err)
 	}
 
-	pp, err := jethre.PrettyPrint(val)
+	pp, err := repl.re.PrettyPrint(val)
 	if err != nil {
 		t.Errorf("%v", err)
 	}
@@ -96,16 +62,14 @@ func TestJEthRE(t *testing.T) {
 		t.Errorf("incorrect result, expected %s, got %v", expected, strVal)
 	}
 
-	jethre.Bind("eth", &ethadmin{ethereum, xeth, jethre.ToVal})
-
 	// should get current block
-	val0, err := jethre.Run("admin.dumpBlock()")
+	val0, err := repl.re.Run("admin.dumpBlock()")
 	if err != nil {
 		t.Errorf("expected no error, got %v", err)
 	}
 
 	fn := "/tmp/eth/data/blockchain.0"
-	val, err = jethre.Run("admin.export(\"" + fn + "\")")
+	val, err = repl.re.Run("admin.export(\"" + fn + "\")")
 	if err != nil {
 		t.Errorf("expected no error, got %v", err)
 	}
@@ -117,7 +81,7 @@ func TestJEthRE(t *testing.T) {
 		DataDir:        "/tmp/eth1",
 		AccountManager: accounts.NewManager(ks),
 	})
-	val, err = jethre.Run("admin.import(\"" + fn + "\")")
+	val, err = repl.re.Run("admin.import(\"" + fn + "\")")
 	if err != nil {
 		t.Errorf("expected no error, got %v", err)
 	}
@@ -125,7 +89,7 @@ func TestJEthRE(t *testing.T) {
 	var val1 otto.Value
 
 	// should get current block
-	val1, err = jethre.Run("admin.dumpBlock()")
+	val1, err = repl.re.Run("admin.dumpBlock()")
 	if err != nil {
 		t.Errorf("expected no error, got %v", err)
 	}
@@ -144,7 +108,7 @@ func TestJEthRE(t *testing.T) {
 	//         /Users/tron/Work/ethereum/go/src/github.com/ethereum/go-ethereum/eth/backend.go:292 +0xdc
 	// defer ethereum.Stop()
 
-	val, err = jethre.Run("web3.eth.mining")
+	val, err = repl.re.Run("web3.eth.mining")
 	if err != nil {
 		t.Errorf("expected no error, got %v", err)
 	}
@@ -157,7 +121,7 @@ func TestJEthRE(t *testing.T) {
 		t.Errorf("expected false (not mining), got true")
 	}
 
-	val, err = jethre.Run("admin.setMining(true)")
+	val, err = repl.re.Run("admin.setMining(true)")
 	if err != nil {
 		t.Errorf("expected no error, got %v", err)
 	}
@@ -165,7 +129,7 @@ func TestJEthRE(t *testing.T) {
 	if !mining {
 		t.Errorf("expected true (mining), got false")
 	}
-	val, err = jethre.Run("web3.eth.mining")
+	val, err = repl.re.Run("web3.eth.mining")
 	if err != nil {
 		t.Errorf("expected no error, got %v", err)
 	}
@@ -177,7 +141,7 @@ func TestJEthRE(t *testing.T) {
 		t.Errorf("expected true (mining), got false")
 	}
 
-	val, err = jethre.Run("admin.setMining(true)")
+	val, err = repl.re.Run("admin.setMining(true)")
 	if err != nil {
 		t.Errorf("expected no error, got %v", err)
 	}
@@ -186,7 +150,7 @@ func TestJEthRE(t *testing.T) {
 		t.Errorf("expected true (mining), got false")
 	}
 
-	val, err = jethre.Run("admin.setMining(false)")
+	val, err = repl.re.Run("admin.setMining(false)")
 	if err != nil {
 		t.Errorf("expected no error, got %v", err)
 	}

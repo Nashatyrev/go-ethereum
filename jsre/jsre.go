@@ -58,6 +58,14 @@ func (self *JSRE) Run(code string) (otto.Value, error) {
 	return self.vm.Run(code)
 }
 
+func (self *JSRE) Get(ns string) (otto.Value, error) {
+	return self.vm.Get(ns)
+}
+
+func (self *JSRE) Set(ns string, v interface{}) error {
+	return self.vm.Set(ns, v)
+}
+
 func (self *JSRE) require(call otto.FunctionCall) otto.Value {
 	file, err := call.Argument(0).ToString()
 	if err != nil {
