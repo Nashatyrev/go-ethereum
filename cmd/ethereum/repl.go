@@ -10,8 +10,8 @@ import (
 )
 
 type REPLbackend interface {
-	Handle(string) (string, error)
-	Load(string) error
+	Eval(string) (string, error)
+	Exec(string) error
 }
 
 /*
@@ -77,7 +77,7 @@ func NewREPL(re REPLbackend) (self *REPL) {
 }
 
 func (self *REPL) Exec(filename string) error {
-	return self.backend.Load(filename)
+	return self.backend.Exec(filename)
 }
 
 func (self *REPL) Interactive(prompt, history string) {
@@ -128,7 +128,7 @@ func (self *REPL) parseInput(code string) {
 			fmt.Println("[native] error", r)
 		}
 	}()
-	val, err := self.backend.Handle(code)
+	val, err := self.backend.Eval(code)
 	if err != nil {
 		fmt.Println(err)
 		return

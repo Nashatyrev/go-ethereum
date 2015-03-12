@@ -34,13 +34,13 @@ func New(assetPath string) *JSRE {
 	return re
 }
 
-// Load(file) loads and runs the contents of a file
+// Exec(file) loads and runs the contents of a file
 // if a relative path is given, the jsre's assetPath is used
-func (self *JSRE) Load(file string) error {
-	return self.load(ethutil.AbsolutePath(self.assetPath, file))
+func (self *JSRE) Exec(file string) error {
+	return self.exec(ethutil.AbsolutePath(self.assetPath, file))
 }
 
-func (self *JSRE) load(path string) error {
+func (self *JSRE) exec(path string) error {
 	code, err := ioutil.ReadFile(path)
 	if err != nil {
 		return err
@@ -63,7 +63,7 @@ func (self *JSRE) require(call otto.FunctionCall) otto.Value {
 	if err != nil {
 		return otto.FalseValue()
 	}
-	if err := self.Load(file); err != nil {
+	if err := self.Exec(file); err != nil {
 		fmt.Println("err:", err)
 		return otto.FalseValue()
 	}
@@ -93,7 +93,7 @@ func (self *JSRE) ToVal(v interface{}) otto.Value {
 	return result
 }
 
-func (self *JSRE) Handle(code string) (s string, err error) {
+func (self *JSRE) Eval(code string) (s string, err error) {
 	var val otto.Value
 	val, err = self.Run(code)
 	if err != nil {

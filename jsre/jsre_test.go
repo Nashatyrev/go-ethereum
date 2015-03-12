@@ -27,11 +27,11 @@ func (no *testNativeObjectBinding) TestMethod(call otto.FunctionCall) otto.Value
 	return no.toVal(&msg{m})
 }
 
-func TestLoad(t *testing.T) {
+func TestExec(t *testing.T) {
 	jsre := New("/tmp")
 
 	ethutil.WriteFile("/tmp/test.js", []byte(`msg = "testMsg"`))
-	err := jsre.Load("test.js")
+	err := jsre.Exec("test.js")
 	if err != nil {
 		t.Errorf("expected no error, got %v", err)
 	}
@@ -44,7 +44,7 @@ func TestLoad(t *testing.T) {
 	}
 
 	// this errors
-	err = jsre.Load(path.Join(defaultAssetPath, "bignumber.min.js"))
+	err = jsre.Exec(path.Join(defaultAssetPath, "bignumber.min.js"))
 	if err != nil {
 		t.Errorf("expected no error, got %v", err)
 	}
