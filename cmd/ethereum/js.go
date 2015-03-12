@@ -44,7 +44,7 @@ func jethre(ethereum *eth.Ethereum) *REPL {
 	xeth := xeth.New(ethereum, frontend)
 	ethApi := rpc.NewEthereumApi(xeth, ethereum.DataDir)
 	re.Bind("jeth", rpc.NewJeth(ethApi, re.ToVal))
-	re.Bind("eth", &ethadmin{ethereum, xeth, re.ToVal})
+	re.Bind("admin", &ethadmin{ethereum, xeth, re.ToVal})
 
 	_, err := re.Run(jsre.BigNumber_JS)
 
@@ -109,10 +109,6 @@ type ethadmin struct {
 	eth   *eth.Ethereum
 	xeth  *xeth.XEth
 	toVal func(interface{}) otto.Value
-}
-
-func (self *ethadmin) IsMining(call otto.FunctionCall) otto.Value {
-	return self.toVal(self.xeth.IsMining())
 }
 
 func (self *ethadmin) SetMining(call otto.FunctionCall) otto.Value {

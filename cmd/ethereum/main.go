@@ -27,10 +27,10 @@ import (
 	"path"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/codegangsta/cli"
-	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/eth"
@@ -113,6 +113,7 @@ runtime will execute the file and exit.
 		},
 	}
 	app.Flags = []cli.Flag{
+		utils.UnlockedAccountFlag,
 		utils.BootnodesFlag,
 		utils.DataDirFlag,
 		utils.ListenPortFlag,
@@ -128,6 +129,7 @@ runtime will execute the file and exit.
 		utils.RPCEnabledFlag,
 		utils.RPCListenAddrFlag,
 		utils.RPCPortFlag,
+		utils.UnencryptedKeysFlag,
 		utils.VMDebugFlag,
 		//utils.VMTypeFlag,
 	}
@@ -156,10 +158,7 @@ func run(ctx *cli.Context) {
 	fmt.Printf("Welcome to the FRONTIER\n")
 	utils.HandleInterrupt()
 	eth, err := utils.GetEthereum(ClientIdentifier, Version, ctx)
-	if err == accounts.ErrNoKeys {
-		utils.Fatalf(`No accounts configured.
-Please run 'ethereum account new' to create a new account.`)
-	} else if err != nil {
+	if err != nil {
 		utils.Fatalf("%v", err)
 	}
 
@@ -172,10 +171,7 @@ var assetPath = path.Join(os.Getenv("GOPATH"), "src", "github.com", "ethereum", 
 
 func runjs(ctx *cli.Context) {
 	eth, err := utils.GetEthereum(ClientIdentifier, Version, ctx)
-	if err == accounts.ErrNoKeys {
-		utils.Fatalf(`No accounts configured.
-Please run 'ethereum account new' to create a new account.`)
-	} else if err != nil {
+	if err != nil {
 		utils.Fatalf("%v", err)
 	}
 
@@ -196,12 +192,27 @@ Please run 'ethereum account new' to create a new account.`)
 
 func startEth(ctx *cli.Context, eth *eth.Ethereum) {
 	utils.StartEthereum(eth)
+
+	// Load startup keys. XXX we are going to need a different format
+	account := ctx.GlobalString(utils.UnlockedAccountFlag.Name)
+	if len(account) > 0 {
+		split := strings.Split(account, ":")
+		if len(split) != 2 {
+			utils.Fatalf("Illegal 'unlock' format (address:password)")
+		}
+		am := eth.AccountManager()
+		// Attempt to unlock the account
+		err := am.Unlock(ethutil.Hex2Bytes(split[0]), split[1])
+		if err != nil {
+			utils.Fatalf("Unlock account failed '%v'", err)
+		}
+	}
 	// Start auxiliary services if enabled.
 	if ctx.GlobalBool(utils.RPCEnabledFlag.Name) {
 		utils.StartRPC(eth, ctx)
 	}
 	if ctx.GlobalBool(utils.MiningEnabledFlag.Name) {
-		eth.Miner().Start()
+		eth.StartMining()
 	}
 }
 
@@ -218,20 +229,24 @@ func accountList(ctx *cli.Context) {
 
 func accountCreate(ctx *cli.Context) {
 	am := utils.GetAccountManager(ctx)
-	fmt.Println("The new account will be encrypted with a passphrase.")
-	fmt.Println("Please enter a passphrase now.")
-	auth, err := readPassword("Passphrase: ", true)
-	if err != nil {
-		utils.Fatalf("%v", err)
+	passphrase := ""
+	if !ctx.GlobalBool(utils.UnencryptedKeysFlag.Name) {
+		fmt.Println("The new account will be encrypted with a passphrase.")
+		fmt.Println("Please enter a passphrase now.")
+		auth, err := readPassword("Passphrase: ", true)
+		if err != nil {
+			utils.Fatalf("%v", err)
+		}
+		confirm, err := readPassword("Repeat Passphrase: ", false)
+		if err != nil {
+			utils.Fatalf("%v", err)
+		}
+		if auth != confirm {
+			utils.Fatalf("Passphrases did not match.")
+		}
+		passphrase = auth
 	}
-	confirm, err := readPassword("Repeat Passphrase: ", false)
-	if err != nil {
-		utils.Fatalf("%v", err)
-	}
-	if auth != confirm {
-		utils.Fatalf("Passphrases did not match.")
-	}
-	acct, err := am.NewAccount(auth)
+	acct, err := am.NewAccount(passphrase)
 	if err != nil {
 		utils.Fatalf("Could not create the account: %v", err)
 	}
