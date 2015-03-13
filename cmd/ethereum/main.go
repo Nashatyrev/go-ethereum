@@ -173,7 +173,7 @@ func runjs(ctx *cli.Context) {
 	}
 
 	startEth(ctx, eth)
-	// repl := newJSRE(eth, ctx.GlobalString(utils.JSlibPathFlag.Name))
+	repl := newJSRE(eth, ctx.GlobalString(utils.jslibPathFlag.Name))
 	repl := newJSRE(eth, "/tmp")
 	if len(ctx.Args()) == 0 {
 		repl.interactive()

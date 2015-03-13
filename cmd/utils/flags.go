@@ -164,6 +164,11 @@ var (
 		Usage: "Port mapping mechanism (any|none|upnp|pmp|extip:<IP>)",
 		Value: "any",
 	}
+	JSpathFlag = cli.StringFlag{
+		Name:  "jspath",
+		Usage: "JS library path",
+		Value: ".",
+	}
 )
 
 func GetNAT(ctx *cli.Context) nat.Interface {
