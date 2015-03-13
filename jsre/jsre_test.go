@@ -77,7 +77,7 @@ func TestRequire(t *testing.T) {
 	if err == nil {
 		t.Errorf("expected error, got nothing")
 	}
-	_, err = jsre.Run(`require("bignumber.min.js"); x = new BigNumber(123.4567)`)
+	_, err = jsre.Run(`loadScript("bignumber.min.js"); x = new BigNumber(123.4567)`)
 	if err != nil {
 		t.Errorf("expected no error, got %v", err)
 	}

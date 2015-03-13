@@ -29,7 +29,7 @@ func New(assetPath string) *JSRE {
 
 	// load prettyprint func definition
 	re.vm.Run(pp_js)
-	re.vm.Set("require", re.require)
+	re.vm.Set("loadScript", re.loadScript)
 
 	return re
 }
@@ -66,7 +66,7 @@ func (self *JSRE) Set(ns string, v interface{}) error {
 	return self.vm.Set(ns, v)
 }
 
-func (self *JSRE) require(call otto.FunctionCall) otto.Value {
+func (self *JSRE) loadScript(call otto.FunctionCall) otto.Value {
 	file, err := call.Argument(0).ToString()
 	if err != nil {
 		return otto.FalseValue()
