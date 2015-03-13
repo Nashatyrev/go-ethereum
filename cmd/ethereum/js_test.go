@@ -43,7 +43,7 @@ func TestJEthRE(t *testing.T) {
 	assetPath := path.Join(os.Getenv("GOPATH"), "src", "github.com", "ethereum", "go-ethereum", "cmd", "mist", "assets", "ext")
 	repl := newJSRE(ethereum, assetPath)
 
-	val, err := repl.re.Run("web3.eth.coinbase")
+	val, err := repl.re.Run("eth.coinbase")
 	if err != nil {
 		t.Errorf("expected no error, got %v", err)
 	}
@@ -102,13 +102,9 @@ func TestJEthRE(t *testing.T) {
 	}
 
 	ethereum.Start()
-	// FIXME:
-	// ethereum.Stop causes panic: runtime error: invalid memory address or nil pointer
-	// github.com/ethereum/go-ethereum/eth.(*Ethereum).Stop(0xc208f46270)
-	//         /Users/tron/Work/ethereum/go/src/github.com/ethereum/go-ethereum/eth/backend.go:292 +0xdc
-	// defer ethereum.Stop()
+	defer ethereum.Stop()
 
-	val, err = repl.re.Run("web3.eth.mining")
+	val, err = repl.re.Run("eth.mining")
 	if err != nil {
 		t.Errorf("expected no error, got %v", err)
 	}
@@ -129,7 +125,7 @@ func TestJEthRE(t *testing.T) {
 	if !mining {
 		t.Errorf("expected true (mining), got false")
 	}
-	val, err = repl.re.Run("web3.eth.mining")
+	val, err = repl.re.Run("eth.mining")
 	if err != nil {
 		t.Errorf("expected no error, got %v", err)
 	}
