@@ -244,9 +244,11 @@ func (s *Ethereum) Start() error {
 		ProtocolVersion: ProtocolVersion,
 	})
 
-	err := s.net.Start()
-	if err != nil {
-		return err
+	if s.net.MaxPeers > 0 {
+		err := s.net.Start()
+		if err != nil {
+			return err
+		}
 	}
 
 	// Start services
@@ -293,6 +295,7 @@ func (s *Ethereum) Stop() {
 	// Close the database
 	defer s.blockDb.Close()
 	defer s.stateDb.Close()
+	defer s.extraDb.Close()
 
 	s.txSub.Unsubscribe()    // quits txBroadcastLoop
 	s.blockSub.Unsubscribe() // quits blockBroadcastLoop
