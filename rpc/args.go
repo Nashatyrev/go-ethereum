@@ -188,9 +188,33 @@ type GetBalanceArgs struct {
 }
 
 func (args *GetBalanceArgs) UnmarshalJSON(b []byte) (err error) {
-	if err = UnmarshalRawMessages(b, &args.Address, &args.BlockNumber); err != nil {
+	var obj []interface{}
+	r := bytes.NewReader(b)
+	if err := json.NewDecoder(r).Decode(&obj); err != nil {
 		return errDecodeArgs
 	}
+
+	if len(obj) < 1 {
+		return errArguments
+	}
+
+	addstr, ok := obj[0].(string)
+	if !ok {
+		return errDecodeArgs
+	}
+	args.Address = addstr
+
+	if len(obj) > 1 {
+		if obj[1].(string) == "latest" {
+			args.BlockNumber = -1
+		} else {
+			args.BlockNumber = ethutil.Big(obj[1].(string)).Int64()
+		}
+	}
+
+	// if err = UnmarshalRawMessages(b, &args.Address, &args.BlockNumber); err != nil {
+	// 	return errDecodeArgs
+	// }
 
 	return nil
 }
@@ -227,9 +251,65 @@ type BlockNumIndexArgs struct {
 	Index       int64
 }
 
+func (args *BlockNumIndexArgs) UnmarshalJSON(b []byte) (err error) {
+	var obj []interface{}
+	r := bytes.NewReader(b)
+	if err := json.NewDecoder(r).Decode(&obj); err != nil {
+		return errDecodeArgs
+	}
+
+	if len(obj) < 1 {
+		return errArguments
+	}
+
+	arg0, ok := obj[0].(string)
+	if !ok {
+		return errDecodeArgs
+	}
+	args.BlockNumber = ethutil.Big(arg0).Int64()
+
+	if len(obj) > 1 {
+		arg1, ok := obj[1].(string)
+		if !ok {
+			return errDecodeArgs
+		}
+		args.Index = ethutil.Big(arg1).Int64()
+	}
+
+	return nil
+}
+
 type HashIndexArgs struct {
-	BlockHash string
-	Index     int64
+	Hash  string
+	Index int64
+}
+
+func (args *HashIndexArgs) UnmarshalJSON(b []byte) (err error) {
+	var obj []interface{}
+	r := bytes.NewReader(b)
+	if err := json.NewDecoder(r).Decode(&obj); err != nil {
+		return errDecodeArgs
+	}
+
+	if len(obj) < 1 {
+		return errArguments
+	}
+
+	arg0, ok := obj[0].(string)
+	if !ok {
+		return errDecodeArgs
+	}
+	args.Hash = arg0
+
+	if len(obj) > 1 {
+		arg1, ok := obj[1].(string)
+		if !ok {
+			return errDecodeArgs
+		}
+		args.Index = ethutil.Big(arg1).Int64()
+	}
+
+	return nil
 }
 
 type Sha3Args struct {

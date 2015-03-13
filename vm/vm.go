@@ -235,9 +235,9 @@ func (self *Vm) Run(me, caller ContextRef, code []byte, value, gas, price *big.I
 
 			stack.push(base)
 		case SIGNEXTEND:
-			back := stack.pop().Uint64()
-			if back < 31 {
-				bit := uint(back*8 + 7)
+			back := stack.pop()
+			if back.Cmp(big.NewInt(31)) < 0 {
+				bit := uint(back.Uint64()*8 + 7)
 				num := stack.pop()
 				mask := new(big.Int).Lsh(ethutil.Big1, bit)
 				mask.Sub(mask, ethutil.Big1)
@@ -254,12 +254,10 @@ func (self *Vm) Run(me, caller ContextRef, code []byte, value, gas, price *big.I
 				stack.push(num)
 			}
 		case NOT:
-			base.Sub(Pow256, stack.pop()).Sub(base, ethutil.Big1)
-
-			// Not needed
-			base = U256(base)
-
-			stack.push(base)
+			stack.push(U256(new(big.Int).Not(stack.pop())))
+			//base.Sub(Pow256, stack.pop()).Sub(base, ethutil.Big1)
+			//base = U256(base)
+			//stack.push(base)
 		case LT:
 			x, y := stack.pop(), stack.pop()
 			self.Printf(" %v < %v", x, y)
@@ -349,16 +347,15 @@ func (self *Vm) Run(me, caller ContextRef, code []byte, value, gas, price *big.I
 
 			stack.push(base)
 		case ADDMOD:
-
 			x := stack.pop()
 			y := stack.pop()
 			z := stack.pop()
 
-			add := new(big.Int).Add(x, y)
-			if len(z.Bytes()) > 0 { // NOT 0x0
+			if z.Cmp(Zero) > 0 {
+				add := U256(new(big.Int).Add(x, y))
 				base.Mod(add, z)
 
-				U256(base)
+				base = U256(base)
 			}
 
 			self.Printf(" %v + %v %% %v = %v", x, y, z, base)
@@ -383,7 +380,7 @@ func (self *Vm) Run(me, caller ContextRef, code []byte, value, gas, price *big.I
 
 			// 0x20 range
 		case SHA3:
-			size, offset := stack.pop(), stack.pop()
+			offset, size := stack.pop(), stack.pop()
 			data := crypto.Sha3(mem.Get(offset.Int64(), size.Int64()))
 
 			stack.push(ethutil.BigD(data))
@@ -395,14 +392,8 @@ func (self *Vm) Run(me, caller ContextRef, code []byte, value, gas, price *big.I
 
 			self.Printf(" => %x", context.Address())
 		case BALANCE:
-
 			addr := stack.pop().Bytes()
-			var balance *big.Int
-			if statedb.GetStateObject(addr) != nil {
-				balance = statedb.GetBalance(addr)
-			} else {
-				balance = base
-			}
+			balance := statedb.GetBalance(addr)
 
 			stack.push(balance)
 

@@ -167,7 +167,10 @@ func (self *EthereumApi) NewFilter(args *FilterOptions, reply *interface{}) erro
 }
 
 func (self *EthereumApi) UninstallFilter(id int, reply *interface{}) error {
-	delete(self.logs, id)
+	if _, ok := self.logs[id]; ok {
+		delete(self.logs, id)
+	}
+
 	self.filterManager.UninstallFilter(id)
 	*reply = true
 	return nil
@@ -377,7 +380,13 @@ func (p *EthereumApi) NewWhisperFilter(args *WhisperFilterArgs, reply *interface
 	}
 	id = p.xeth().Whisper().Watch(opts)
 	p.messages[id] = &whisperFilter{timeout: time.Now()}
-	*reply = id
+	*reply = toHex(big.NewInt(int64(id)).Bytes())
+	return nil
+}
+
+func (p *EthereumApi) UninstallWhisperFilter(id int, reply *interface{}) error {
+	delete(p.messages, id)
+	*reply = true
 	return nil
 }
 
@@ -409,6 +418,14 @@ func (p *EthereumApi) HasWhisperIdentity(args string, reply *interface{}) error 
 
 func (p *EthereumApi) WhisperMessages(id int, reply *interface{}) error {
 	*reply = p.xeth().Whisper().Messages(id)
+	return nil
+}
+
+func (p *EthereumApi) GetTransactionByHash(hash string, reply *interface{}) error {
+	tx := p.xeth().EthTransactionByHash(hash)
+	if tx != nil {
+		*reply = NewTransactionRes(tx)
+	}
 	return nil
 }
 
@@ -585,14 +602,18 @@ func (p *EthereumApi) GetRequestReply(req *RpcRequest, reply *interface{}) error
 		}
 		*reply = v
 	case "eth_getTransactionByHash":
-		return errNotImplemented
+		// HashIndexArgs used, but only the "Hash" part we need.
+		args := new(HashIndexArgs)
+		if err := json.Unmarshal(req.Params, &args); err != nil {
+		}
+		return p.GetTransactionByHash(args.Hash, reply)
 	case "eth_getTransactionByBlockHashAndIndex":
 		args := new(HashIndexArgs)
 		if err := json.Unmarshal(req.Params, &args); err != nil {
 			return err
 		}
 
-		v, err := p.GetBlockByHash(args.BlockHash, true)
+		v, err := p.GetBlockByHash(args.Hash, true)
 		if err != nil {
 			return err
 		}
@@ -620,7 +641,7 @@ func (p *EthereumApi) GetRequestReply(req *RpcRequest, reply *interface{}) error
 			return err
 		}
 
-		v, err := p.GetBlockByHash(args.BlockHash, false)
+		v, err := p.GetBlockByHash(args.Hash, false)
 		if err != nil {
 			return err
 		}
@@ -733,7 +754,11 @@ func (p *EthereumApi) GetRequestReply(req *RpcRequest, reply *interface{}) error
 		}
 		return p.NewWhisperFilter(args, reply)
 	case "shh_uninstallFilter":
-		return errNotImplemented
+		args := new(FilterIdArgs)
+		if err := json.Unmarshal(req.Params, &args); err != nil {
+			return err
+		}
+		return p.UninstallWhisperFilter(args.Id, reply)
 	case "shh_getFilterChanges":
 		args := new(FilterIdArgs)
 		if err := json.Unmarshal(req.Params, &args); err != nil {

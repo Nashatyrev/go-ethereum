@@ -43,6 +43,17 @@ func TestGetBalanceArgs(t *testing.T) {
 	}
 }
 
+func TestGetBalanceEmptyArgs(t *testing.T) {
+	input := `[]`
+
+	args := new(GetBalanceArgs)
+	err := json.Unmarshal([]byte(input), &args)
+	if err == nil {
+		t.Error("Expected error but didn't get one")
+	}
+
+}
+
 func TestGetBlockByHashArgs(t *testing.T) {
 	input := `["0xe670ec64341771606e55d6b4ca35a1a6b75ee3d5145a99d05921026d1527331", true]`
 	expected := new(GetBlockByHashArgs)
@@ -418,6 +429,16 @@ func TestFilterStringArgs(t *testing.T) {
 	}
 }
 
+func TestFilterStringEmptyArgs(t *testing.T) {
+	input := `[]`
+
+	args := new(FilterStringArgs)
+	err := json.Unmarshal([]byte(input), &args)
+	if err == nil {
+		t.Error("Expected error but didn't get one")
+	}
+}
+
 func TestWhisperIdentityArgs(t *testing.T) {
 	input := `["0xc931d93e97ab07fe42d923478ba2465f283"]`
 	expected := new(WhisperIdentityArgs)
@@ -430,5 +451,45 @@ func TestWhisperIdentityArgs(t *testing.T) {
 
 	if expected.Identity != args.Identity {
 		t.Errorf("Identity shoud be %#v but is %#v", expected.Identity, args.Identity)
+	}
+}
+
+func TestBlockNumIndexArgs(t *testing.T) {
+	input := `["0x29a", "0x0"]`
+	expected := new(BlockNumIndexArgs)
+	expected.BlockNumber = 666
+	expected.Index = 0
+
+	args := new(BlockNumIndexArgs)
+	if err := json.Unmarshal([]byte(input), &args); err != nil {
+		t.Error(err)
+	}
+
+	if expected.BlockNumber != args.BlockNumber {
+		t.Errorf("BlockNumber shoud be %#v but is %#v", expected.BlockNumber, args.BlockNumber)
+	}
+
+	if expected.Index != args.Index {
+		t.Errorf("Index shoud be %#v but is %#v", expected.Index, args.Index)
+	}
+}
+
+func TestHashIndexArgs(t *testing.T) {
+	input := `["0xc6ef2fc5426d6ad6fd9e2a26abeab0aa2411b7ab17f30a99d3cb96aed1d1055b", "0x1"]`
+	expected := new(HashIndexArgs)
+	expected.Hash = "0xc6ef2fc5426d6ad6fd9e2a26abeab0aa2411b7ab17f30a99d3cb96aed1d1055b"
+	expected.Index = 1
+
+	args := new(HashIndexArgs)
+	if err := json.Unmarshal([]byte(input), &args); err != nil {
+		t.Error(err)
+	}
+
+	if expected.Hash != args.Hash {
+		t.Errorf("Hash shoud be %#v but is %#v", expected.Hash, args.Hash)
+	}
+
+	if expected.Index != args.Index {
+		t.Errorf("Index shoud be %#v but is %#v", expected.Index, args.Index)
 	}
 }
