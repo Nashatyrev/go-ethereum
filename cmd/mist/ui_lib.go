@@ -29,7 +29,7 @@ import (
 	"github.com/ethereum/go-ethereum/eth"
 	"github.com/ethereum/go-ethereum/ethutil"
 	"github.com/ethereum/go-ethereum/event/filter"
-	"github.com/ethereum/go-ethereum/javascript"
+	"github.com/ethereum/go-ethereum/jsre"
 	"github.com/ethereum/go-ethereum/xeth"
 	"github.com/obscuren/qml"
 )
@@ -49,15 +49,22 @@ type UiLib struct {
 	// The main application window
 	win *qml.Window
 
-	jsEngine *javascript.JSRE
+	jsre *jsre.JSRE
 
 	filterCallbacks map[int][]int
 	filterManager   *filter.FilterManager
 }
 
-func NewUiLib(engine *qml.Engine, eth *eth.Ethereum, assetPath string) *UiLib {
+func NewUiLib(engine *qml.Engine, eth *eth.Ethereum, assetPath, libPath string) *UiLib {
 	x := xeth.New(eth, nil)
-	lib := &UiLib{XEth: x, engine: engine, eth: eth, assetPath: assetPath, jsEngine: javascript.NewJSRE(x), filterCallbacks: make(map[int][]int)} //, filters: make(map[int]*xeth.JSFilter)}
+	lib := &UiLib{
+		XEth:            x,
+		engine:          engine,
+		eth:             eth,
+		assetPath:       assetPath,
+		jsre:            jsre.New(libPath),
+		filterCallbacks: make(map[int][]int),
+	}
 	lib.filterManager = filter.NewFilterManager(eth.EventMux())
 	go lib.filterManager.Start()
 
@@ -76,12 +83,12 @@ func (self *UiLib) ImportTx(rlpTx string) {
 	}
 }
 
-func (self *UiLib) EvalJavascriptFile(path string) {
-	self.jsEngine.LoadExtFile(path[7:])
+func (self *UiLib) EvalJSFile(path string) {
+	self.jsre.Exec(path)
 }
 
-func (self *UiLib) EvalJavascriptString(str string) string {
-	value, err := self.jsEngine.Run(str)
+func (self *UiLib) EvalJSString(str string) string {
+	value, err := self.jsre.Eval(str)
 	if err != nil {
 		return err.Error()
 	}

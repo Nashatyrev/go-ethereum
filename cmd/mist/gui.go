@@ -99,7 +99,7 @@ func NewWindow(ethereum *eth.Ethereum) *Gui {
 	return gui
 }
 
-func (gui *Gui) Start(assetPath string) {
+func (gui *Gui) Start(assetPath, libPath string) {
 	defer gui.txDb.Close()
 
 	guilogger.Infoln("Starting GUI")
@@ -117,7 +117,7 @@ func (gui *Gui) Start(assetPath string) {
 	// Create a new QML engine
 	gui.engine = qml.NewEngine()
 	context := gui.engine.Context()
-	gui.uiLib = NewUiLib(gui.engine, gui.eth, assetPath)
+	gui.uiLib = NewUiLib(gui.engine, gui.eth, assetPath, libPath)
 	gui.whisper = qwhisper.New(gui.eth.Whisper())
 
 	// Expose the eth library and the ui library to QML
