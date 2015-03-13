@@ -119,6 +119,16 @@ func (js *jsre) apiBindings() {
 	if err != nil {
 		utils.Fatalf("Error setting web3 provider: %v", err)
 	}
+	_, err = js.re.Eval(`
+	var eth = web3.eth;
+  var shh = web3.shh;
+  var db  = web3.db;
+  var net = web3.net;
+  `)
+	if err != nil {
+		utils.Fatalf("Error setting namespaces: %v", err)
+	}
+
 }
 
 func (self *jsre) ConfirmTransaction(tx *types.Transaction) bool {
