@@ -62,6 +62,29 @@ func TestJEthRE(t *testing.T) {
 		t.Errorf("incorrect result, expected %s, got %v", expected, strVal)
 	}
 
+	val, err = repl.re.Run(`admin.newAccount("password")`)
+	if err != nil {
+		t.Errorf("expected no error, got %v", err)
+	}
+	addr, err := val.ToString()
+	if err != nil {
+		t.Errorf("expected string, got %v", err)
+	}
+
+	val, err = repl.re.Run("eth.accounts")
+	if err != nil {
+		t.Errorf("expected no error, got %v", err)
+	}
+	addrs, err := val.ToString()
+	if err != nil {
+		t.Errorf("expected string, got %v", err)
+	}
+	if addr != addrs {
+	}
+	// if lenaddr !=  {
+	// 	t.Errorf("expected false (not mining), got true")
+	// }
+
 	// should get current block
 	val0, err := repl.re.Run("admin.dumpBlock()")
 	if err != nil {
@@ -117,7 +140,7 @@ func TestJEthRE(t *testing.T) {
 		t.Errorf("expected false (not mining), got true")
 	}
 
-	val, err = repl.re.Run("admin.setMining(true)")
+	val, err = repl.re.Run("admin.startMining(4)")
 	if err != nil {
 		t.Errorf("expected no error, got %v", err)
 	}
@@ -137,7 +160,7 @@ func TestJEthRE(t *testing.T) {
 		t.Errorf("expected true (mining), got false")
 	}
 
-	val, err = repl.re.Run("admin.setMining(true)")
+	val, err = repl.re.Run("admin.startMining(4)")
 	if err != nil {
 		t.Errorf("expected no error, got %v", err)
 	}
@@ -146,13 +169,13 @@ func TestJEthRE(t *testing.T) {
 		t.Errorf("expected true (mining), got false")
 	}
 
-	val, err = repl.re.Run("admin.setMining(false)")
+	val, err = repl.re.Run("admin.stopMining()")
 	if err != nil {
 		t.Errorf("expected no error, got %v", err)
 	}
 	mining, _ = val.ToBoolean()
-	if mining {
-		t.Errorf("expected false (not mining), got true")
+	if !mining {
+		t.Errorf("expected true (mining), got false")
 	}
 
 }

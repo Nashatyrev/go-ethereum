@@ -2,12 +2,18 @@ package main
 
 import (
 	"fmt"
+	"net"
+	"net/http"
 	"os"
+	"time"
 
+	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethutil"
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethereum/go-ethereum/state"
+	"github.com/ethereum/go-ethereum/xeth"
 	"github.com/obscuren/otto"
 )
 
@@ -19,35 +25,144 @@ func (js *jsre) adminBindings() {
 	js.re.Set("admin", struct{}{})
 	t, _ := js.re.Get("admin")
 	admin := t.Object()
-	admin.Set("addPeer", js.addPeer)
-	admin.Set("setMining", js.setMining)
+	admin.Set("suggestPeer", js.suggestPeer)
+	admin.Set("startRPC", js.startRPC)
+	admin.Set("startMining", js.startMining)
+	admin.Set("stopMining", js.stopMining)
+	admin.Set("nodeInfo", js.nodeInfo)
+	// admin.Set("peers", js.peers)
+	admin.Set("newAccount", js.newAccount)
+	admin.Set("unlock", js.unlock)
 	admin.Set("import", js.importChain)
 	admin.Set("export", js.exportChain)
 	admin.Set("dumpBlock", js.dumpBlock)
 }
 
-func (js *jsre) setMining(call otto.FunctionCall) otto.Value {
-	shouldmine, err := call.Argument(0).ToBoolean()
-	if err != nil {
-		fmt.Println(err)
-		return otto.UndefinedValue()
-	}
-	mining := js.xeth.SetMining(shouldmine)
-	return js.re.ToVal(mining)
-}
-
-func (js *jsre) addPeer(call otto.FunctionCall) otto.Value {
-	nodeURL, err := call.Argument(0).ToString()
+func (js *jsre) startMining(call otto.FunctionCall) otto.Value {
+	_, err := call.Argument(0).ToInteger()
 	if err != nil {
 		fmt.Println(err)
 		return otto.FalseValue()
 	}
-	if err := js.ethereum.SuggestPeer(nodeURL); err != nil {
+	// threads now ignored
+	err = js.ethereum.StartMining()
+	if err != nil {
 		fmt.Println(err)
 		return otto.FalseValue()
 	}
 	return otto.TrueValue()
 }
+
+func (js *jsre) stopMining(call otto.FunctionCall) otto.Value {
+	js.ethereum.StopMining()
+	return otto.TrueValue()
+}
+
+func (js *jsre) startRPC(call otto.FunctionCall) otto.Value {
+	addr, err := call.Argument(0).ToString()
+	if err != nil {
+		fmt.Println(err)
+		return otto.FalseValue()
+	}
+	port, err := call.Argument(0).ToInteger()
+	if err != nil {
+		fmt.Println(err)
+		return otto.FalseValue()
+	}
+	dataDir := js.ethereum.DataDir
+
+	l, err := net.Listen("tcp", fmt.Sprintf("%s:%d", addr, port))
+	if err != nil {
+		fmt.Printf("Can't listen on %s:%d: %v", addr, port, err)
+		return otto.FalseValue()
+	}
+	go http.Serve(l, rpc.JSONRPC(xeth.New(js.ethereum, nil), dataDir))
+	return otto.TrueValue()
+}
+
+func (js *jsre) suggestPeer(call otto.FunctionCall) otto.Value {
+	nodeURL, err := call.Argument(0).ToString()
+	if err != nil {
+		fmt.Println(err)
+		return otto.FalseValue()
+	}
+	err = js.ethereum.SuggestPeer(nodeURL)
+	if err != nil {
+		fmt.Println(err)
+		return otto.FalseValue()
+	}
+	return otto.TrueValue()
+}
+
+func (js *jsre) unlock(call otto.FunctionCall) otto.Value {
+	addr, err := call.Argument(0).ToString()
+	if err != nil {
+		fmt.Println(err)
+		return otto.FalseValue()
+	}
+	passphrase, err := call.Argument(0).ToString()
+	if err != nil {
+		fmt.Println(err)
+		return otto.FalseValue()
+	}
+	seconds, err := call.Argument(0).ToInteger()
+	if err != nil {
+		fmt.Println(err)
+		return otto.FalseValue()
+	}
+	if len(passphrase) == 0 {
+		fmt.Println("Please enter a passphrase now.")
+		passphrase, err = readPassword("Passphrase: ", true)
+		if err != nil {
+			utils.Fatalf("%v", err)
+		}
+	}
+	am := js.ethereum.AccountManager()
+	err = am.TimedUnlock(ethutil.Hex2Bytes(addr), passphrase, time.Duration(seconds)*time.Second)
+	if err != nil {
+		fmt.Printf("Unlock account failed '%v'", err)
+		return otto.FalseValue()
+	}
+	return otto.TrueValue()
+}
+
+func (js *jsre) newAccount(call otto.FunctionCall) otto.Value {
+	passphrase, err := call.Argument(0).ToString()
+	if err != nil {
+		fmt.Println(err)
+		return otto.FalseValue()
+	}
+	if len(passphrase) == 0 {
+		fmt.Println("The new account will be encrypted with a passphrase.")
+		fmt.Println("Please enter a passphrase now.")
+		auth, err := readPassword("Passphrase: ", true)
+		if err != nil {
+			utils.Fatalf("%v", err)
+		}
+		confirm, err := readPassword("Repeat Passphrase: ", false)
+		if err != nil {
+			utils.Fatalf("%v", err)
+		}
+		if auth != confirm {
+			utils.Fatalf("Passphrases did not match.")
+		}
+		passphrase = auth
+	}
+	acct, err := js.ethereum.AccountManager().NewAccount(passphrase)
+	if err != nil {
+		fmt.Printf("Could not create the account: %v", err)
+		return otto.UndefinedValue()
+	}
+	return js.re.ToVal(acct.Address)
+}
+
+func (js *jsre) nodeInfo(call otto.FunctionCall) otto.Value {
+	return js.re.ToVal(js.ethereum.NodeInfo())
+}
+
+// func (js *jsre) peers(call otto.FunctionCall) otto.Value {
+// 	return js.re.ToVal(js.ethereum.PeersInfo())
+// }
 
 func (js *jsre) importChain(call otto.FunctionCall) otto.Value {
 	if len(call.ArgumentList) == 0 {
