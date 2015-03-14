@@ -64,7 +64,7 @@ func (js *jsre) startRPC(call otto.FunctionCall) otto.Value {
 		fmt.Println(err)
 		return otto.FalseValue()
 	}
-	port, err := call.Argument(0).ToInteger()
+	port, err := call.Argument(1).ToInteger()
 	if err != nil {
 		fmt.Println(err)
 		return otto.FalseValue()

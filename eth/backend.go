@@ -209,7 +209,7 @@ func New(config *Config) (*Ethereum, error) {
 	return eth, nil
 }
 
-type nodeInfo struct {
+type NodeInfo struct {
 	Name       string
 	NodeUrl    string
 	NodeID     discover.NodeID
@@ -220,10 +220,10 @@ type nodeInfo struct {
 	ListenAddr string
 }
 
-func (s *Ethereum) NodeInfo() *nodeInfo {
+func (s *Ethereum) NodeInfo() *NodeInfo {
 	node := s.net.Self()
 
-	return &nodeInfo{
+	return &NodeInfo{
 		Name:       s.Name(),
 		NodeUrl:    node.String(),
 		NodeID:     node.ID,
