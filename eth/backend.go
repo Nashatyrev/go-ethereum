@@ -237,6 +237,34 @@ func (s *Ethereum) NodeInfo() *NodeInfo {
 	}
 }
 
+type PeerInfo struct {
+	ID            discover.NodeID
+	Name          string
+	Caps          []p2p.Cap
+	RemoteAddress net.Addr
+	LocalAddress  net.Addr
+}
+
+func newPeerInfo(peer *p2p.Peer) *PeerInfo {
+	return &PeerInfo{
+		ID:            peer.ID(),
+		Name:          peer.Name(),
+		Caps:          peer.Caps(),
+		RemoteAddress: peer.RemoteAddr(),
+		LocalAddress:  peer.LocalAddr(),
+	}
+}
+
+// PeersInfo returns an array of PeerInfo objects describing connected peers
+func (s *Ethereum) PeersInfo() (peersinfo []*PeerInfo) {
+	for _, peer := range s.net.Peers() {
+		if peer != nil {
+			peersinfo = append(peersinfo, newPeerInfo(peer))
+		}
+	}
+	return
+}
+
 func (s *Ethereum) StartMining() error {
 	cb, err := s.accountManager.Coinbase()
 	if err != nil {
@@ -264,6 +292,7 @@ func (s *Ethereum) StateDb() ethutil.Database            { return s.stateDb }
 func (s *Ethereum) ExtraDb() ethutil.Database            { return s.extraDb }
 func (s *Ethereum) IsListening() bool                    { return true } // Always listening
 func (s *Ethereum) PeerCount() int                       { return s.net.PeerCount() }
+func (s *Ethereum) PeerInfo() int                        { return s.net.PeerCount() }
 func (s *Ethereum) Peers() []*p2p.Peer                   { return s.net.Peers() }
 func (s *Ethereum) MaxPeers() int                        { return s.net.MaxPeers }
 func (s *Ethereum) Version() string                      { return s.version }

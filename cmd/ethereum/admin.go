@@ -30,7 +30,7 @@ func (js *jsre) adminBindings() {
 	admin.Set("startMining", js.startMining)
 	admin.Set("stopMining", js.stopMining)
 	admin.Set("nodeInfo", js.nodeInfo)
-	// admin.Set("peers", js.peers)
+	admin.Set("peers", js.peers)
 	admin.Set("newAccount", js.newAccount)
 	admin.Set("unlock", js.unlock)
 	admin.Set("import", js.importChain)
@@ -160,9 +160,9 @@ func (js *jsre) nodeInfo(call otto.FunctionCall) otto.Value {
 	return js.re.ToVal(js.ethereum.NodeInfo())
 }
 
-// func (js *jsre) peers(call otto.FunctionCall) otto.Value {
-// 	return js.re.ToVal(js.ethereum.PeersInfo())
-// }
+func (js *jsre) peers(call otto.FunctionCall) otto.Value {
+	return js.re.ToVal(js.ethereum.PeersInfo())
+}
 
 func (js *jsre) importChain(call otto.FunctionCall) otto.Value {
 	if len(call.ArgumentList) == 0 {
