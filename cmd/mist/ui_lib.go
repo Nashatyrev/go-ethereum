@@ -21,7 +21,6 @@
 package main
 
 import (
-	"fmt"
 	"io/ioutil"
 	"path"
 
@@ -29,7 +28,6 @@ import (
 	"github.com/ethereum/go-ethereum/eth"
 	"github.com/ethereum/go-ethereum/ethutil"
 	"github.com/ethereum/go-ethereum/event/filter"
-	"github.com/ethereum/go-ethereum/jsre"
 	"github.com/ethereum/go-ethereum/xeth"
 	"github.com/obscuren/qml"
 )
@@ -49,8 +47,6 @@ type UiLib struct {
 	// The main application window
 	win *qml.Window
 
-	jsre *jsre.JSRE
-
 	filterCallbacks map[int][]int
 	filterManager   *filter.FilterManager
 }
@@ -62,7 +58,6 @@ func NewUiLib(engine *qml.Engine, eth *eth.Ethereum, assetPath, libPath string) 
 		engine:          engine,
 		eth:             eth,
 		assetPath:       assetPath,
-		jsre:            jsre.New(libPath),
 		filterCallbacks: make(map[int][]int),
 	}
 	lib.filterManager = filter.NewFilterManager(eth.EventMux())
@@ -81,19 +76,6 @@ func (self *UiLib) ImportTx(rlpTx string) {
 	if err != nil {
 		guilogger.Infoln("import tx failed ", err)
 	}
-}
-
-func (self *UiLib) EvalJSFile(path string) {
-	self.jsre.Exec(path)
-}
-
-func (self *UiLib) EvalJSString(str string) string {
-	value, err := self.jsre.Eval(str)
-	if err != nil {
-		return err.Error()
-	}
-
-	return fmt.Sprintf("%v", value)
 }
 
 func (ui *UiLib) Muted(content string) {

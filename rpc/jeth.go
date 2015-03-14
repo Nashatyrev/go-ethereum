@@ -17,7 +17,7 @@ func NewJeth(ethApi *EthereumApi, toVal func(interface{}) otto.Value) *Jeth {
 
 func (self *Jeth) err(code int, msg string, id interface{}) otto.Value {
 	rpcerr := &RpcErrorObject{code, msg}
-	rpcresponse := &RpcErrorResponse{Jsonrpc: jsonrpcver, Id: id, Error: rpcerr}
+	rpcresponse := &RpcErrorResponse{Jsonrpc: Jsonrpcver, Id: id, Error: rpcerr}
 	return self.toVal(rpcresponse)
 }
 
@@ -37,7 +37,7 @@ func (self *Jeth) Send(call otto.FunctionCall) (response otto.Value) {
 	if err != nil {
 		return self.err(-32603, err.Error(), req.Id)
 	}
-	rpcresponse := &RpcSuccessResponse{Jsonrpc: jsonrpcver, Id: req.Id, Result: respif}
+	rpcresponse := &RpcSuccessResponse{Jsonrpc: Jsonrpcver, Id: req.Id, Result: respif}
 	response = self.toVal(rpcresponse)
 	return
 }

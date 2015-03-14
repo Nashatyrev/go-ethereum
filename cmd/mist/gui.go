@@ -25,9 +25,7 @@ import "C"
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"math/big"
-	"os"
 	"path"
 	"runtime"
 	"sort"
@@ -290,25 +288,6 @@ func (gui *Gui) setWalletValue(amount, unconfirmedFunds *big.Int) {
 
 func (self *Gui) getObjectByName(objectName string) qml.Object {
 	return self.win.Root().ObjectByName(objectName)
-}
-
-func loadJavascriptAssets(gui *Gui) (jsfiles string) {
-	for _, fn := range []string{"ext/q.js", "ext/eth.js/main.js", "ext/eth.js/qt.js", "ext/setup.js"} {
-		f, err := os.Open(gui.uiLib.AssetPath(fn))
-		if err != nil {
-			fmt.Println(err)
-			continue
-		}
-
-		content, err := ioutil.ReadAll(f)
-		if err != nil {
-			fmt.Println(err)
-			continue
-		}
-		jsfiles += string(content)
-	}
-
-	return
 }
 
 func (gui *Gui) SendCommand(cmd ServEv) {
