@@ -10,12 +10,12 @@ import (
 var rpchttplogger = logger.NewLogger("RPC-HTTP")
 
 const (
-	Jsonrpcver       = "2.0"
+	jsonrpcver       = "2.0"
 	maxSizeReqLength = 1024 * 1024 // 1MB
 )
 
-// Jsonrpc returns a handler that implements the Ethereum JSON-RPC API.
-func Jsonrpc(pipe *xeth.XEth, dataDir string) http.Handler {
+// JSONRPC returns a handler that implements the Ethereum JSON-RPC API.
+func JSONRPC(pipe *xeth.XEth, dataDir string) http.Handler {
 	var json JsonWrapper
 	api := NewEthereumApi(pipe, dataDir)
 
@@ -26,7 +26,7 @@ func Jsonrpc(pipe *xeth.XEth, dataDir string) http.Handler {
 
 		if req.ContentLength > maxSizeReqLength {
 			jsonerr := &RpcErrorObject{-32700, "Request too large"}
-			json.Send(w, &RpcErrorResponse{Jsonrpc: Jsonrpcver, Id: nil, Error: jsonerr})
+			json.Send(w, &RpcErrorResponse{Jsonrpc: jsonrpcver, Id: nil, Error: jsonerr})
 			return
 		}
 
@@ -36,11 +36,11 @@ func Jsonrpc(pipe *xeth.XEth, dataDir string) http.Handler {
 			break
 		case *DecodeParamError, *InsufficientParamsError, *ValidationError:
 			jsonerr := &RpcErrorObject{-32602, reqerr.Error()}
-			json.Send(w, &RpcErrorResponse{Jsonrpc: Jsonrpcver, Id: nil, Error: jsonerr})
+			json.Send(w, &RpcErrorResponse{Jsonrpc: jsonrpcver, Id: nil, Error: jsonerr})
 			return
 		default:
 			jsonerr := &RpcErrorObject{-32700, "Could not parse request"}
-			json.Send(w, &RpcErrorResponse{Jsonrpc: Jsonrpcver, Id: nil, Error: jsonerr})
+			json.Send(w, &RpcErrorResponse{Jsonrpc: jsonrpcver, Id: nil, Error: jsonerr})
 			return
 		}
 
@@ -51,19 +51,19 @@ func Jsonrpc(pipe *xeth.XEth, dataDir string) http.Handler {
 			break
 		case *NotImplementedError:
 			jsonerr := &RpcErrorObject{-32601, reserr.Error()}
-			json.Send(w, &RpcErrorResponse{Jsonrpc: Jsonrpcver, Id: reqParsed.Id, Error: jsonerr})
+			json.Send(w, &RpcErrorResponse{Jsonrpc: jsonrpcver, Id: reqParsed.Id, Error: jsonerr})
 			return
 		case *DecodeParamError, *InsufficientParamsError, *ValidationError:
 			jsonerr := &RpcErrorObject{-32602, reserr.Error()}
-			json.Send(w, &RpcErrorResponse{Jsonrpc: Jsonrpcver, Id: reqParsed.Id, Error: jsonerr})
+			json.Send(w, &RpcErrorResponse{Jsonrpc: jsonrpcver, Id: reqParsed.Id, Error: jsonerr})
 			return
 		default:
 			jsonerr := &RpcErrorObject{-32603, reserr.Error()}
-			json.Send(w, &RpcErrorResponse{Jsonrpc: Jsonrpcver, Id: reqParsed.Id, Error: jsonerr})
+			json.Send(w, &RpcErrorResponse{Jsonrpc: jsonrpcver, Id: reqParsed.Id, Error: jsonerr})
 			return
 		}
 
 		rpchttplogger.DebugDetailf("Generated response: %T %s", response, response)
-		json.Send(w, &RpcSuccessResponse{Jsonrpc: Jsonrpcver, Id: reqParsed.Id, Result: response})
+		json.Send(w, &RpcSuccessResponse{Jsonrpc: jsonrpcver, Id: reqParsed.Id, Result: response})
 	})
 }
