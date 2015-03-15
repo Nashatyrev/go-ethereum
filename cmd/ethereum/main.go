@@ -175,33 +175,35 @@ func run(ctx *cli.Context) {
 }
 
 func console(ctx *cli.Context) {
-	eth, err := utils.GetEthereum(ClientIdentifier, Version, ctx)
+	cfg := utils.MakeEthConfig(ClientIdentifier, Version, ctx)
+	ethereum, err := eth.New(cfg)
 	if err != nil {
 		utils.Fatalf("%v", err)
 	}
 
-	startEth(ctx, eth)
-	repl := newJSRE(eth, ctx.String(utils.JSpathFlag.Name))
+	startEth(ctx, ethereum)
+	repl := newJSRE(ethereum, ctx.String(utils.JSpathFlag.Name))
 	repl.interactive()
 
-	eth.Stop()
-	eth.WaitForShutdown()
+	ethereum.Stop()
+	ethereum.WaitForShutdown()
 }
 
 func execJSFiles(ctx *cli.Context) {
-	eth, err := utils.GetEthereum(ClientIdentifier, Version, ctx)
+	cfg := utils.MakeEthConfig(ClientIdentifier, Version, ctx)
+	ethereum, err := eth.New(cfg)
 	if err != nil {
 		utils.Fatalf("%v", err)
 	}
 
-	startEth(ctx, eth)
-	repl := newJSRE(eth, ctx.String(utils.JSpathFlag.Name))
+	startEth(ctx, ethereum)
+	repl := newJSRE(ethereum, ctx.String(utils.JSpathFlag.Name))
 	for _, file := range ctx.Args() {
 		repl.exec(file)
 	}
 
-	eth.Stop()
-	eth.WaitForShutdown()
+	ethereum.Stop()
+	ethereum.WaitForShutdown()
 }
 
 func startEth(ctx *cli.Context, eth *eth.Ethereum) {

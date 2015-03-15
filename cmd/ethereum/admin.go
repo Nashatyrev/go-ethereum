@@ -100,25 +100,32 @@ func (js *jsre) unlock(call otto.FunctionCall) otto.Value {
 		fmt.Println(err)
 		return otto.FalseValue()
 	}
-	passphrase, err := call.Argument(0).ToString()
+	seconds, err := call.Argument(2).ToInteger()
 	if err != nil {
 		fmt.Println(err)
 		return otto.FalseValue()
 	}
-	seconds, err := call.Argument(0).ToInteger()
-	if err != nil {
-		fmt.Println(err)
-		return otto.FalseValue()
-	}
-	if len(passphrase) == 0 {
+	arg := call.Argument(1)
+	var passphrase string
+	if arg.IsUndefined() {
 		fmt.Println("Please enter a passphrase now.")
 		passphrase, err = readPassword("Passphrase: ", true)
 		if err != nil {
 			utils.Fatalf("%v", err)
 		}
+	} else {
+		passphrase, err = arg.ToString()
+		if err != nil {
+			fmt.Println(err)
+			return otto.FalseValue()
+		}
 	}
 	am := js.ethereum.AccountManager()
-	err = am.TimedUnlock(ethutil.Hex2Bytes(addr), passphrase, time.Duration(seconds)*time.Second)
+	// err := am.Unlock(ethutil.FromHex(split[0]), split[1])
+	// if err != nil {
+	// 	utils.Fatalf("Unlock account failed '%v'", err)
+	// }
+	err = am.TimedUnlock(ethutil.FromHex(addr), passphrase, time.Duration(seconds)*time.Second)
 	if err != nil {
 		fmt.Printf("Unlock account failed '%v'\n", err)
 		return otto.FalseValue()
@@ -127,12 +134,9 @@ func (js *jsre) unlock(call otto.FunctionCall) otto.Value {
 }
 
 func (js *jsre) newAccount(call otto.FunctionCall) otto.Value {
-	passphrase, err := call.Argument(0).ToString()
-	if err != nil {
-		fmt.Println(err)
-		return otto.FalseValue()
-	}
-	if len(passphrase) == 0 {
+	arg := call.Argument(0)
+	var passphrase string
+	if arg.IsUndefined() {
 		fmt.Println("The new account will be encrypted with a passphrase.")
 		fmt.Println("Please enter a passphrase now.")
 		auth, err := readPassword("Passphrase: ", true)
@@ -147,6 +151,13 @@ func (js *jsre) newAccount(call otto.FunctionCall) otto.Value {
 			utils.Fatalf("Passphrases did not match.")
 		}
 		passphrase = auth
+	} else {
+		var err error
+		passphrase, err = arg.ToString()
+		if err != nil {
+			fmt.Println(err)
+			return otto.FalseValue()
+		}
 	}
 	acct, err := js.ethereum.AccountManager().NewAccount(passphrase)
 	if err != nil {
