@@ -128,15 +128,10 @@ func TestAccounts(t *testing.T) {
 	if err != nil {
 		t.Errorf("expected no error, got %v", err)
 	}
-	addrslice, err := val.Export()
+	addr, err := val.ToString()
 	if err != nil {
 		t.Errorf("expected string, got %v", err)
 	}
-	addr, ok := addrslice.([]byte)
-	if !ok {
-		t.Errorf("expected []byte, got %v", err)
-	}
-	fmt.Printf("addr: %x", addr)
 
 	val, err = repl.re.Run("eth.accounts")
 	if err != nil {
@@ -150,8 +145,8 @@ func TestAccounts(t *testing.T) {
 	if !ok {
 		t.Errorf("expected []string, got %v", err)
 	}
-	if len(addrs) != 2 || (ethutil.Bytes2Hex(addr) != addrs[0][2:] && ethutil.Bytes2Hex(addr) != addrs[1][2:]) {
-		t.Errorf("expected addrs == [<default>, <new>], got %v (%v)", addrs, ethutil.Bytes2Hex(addr))
+	if len(addrs) != 2 || (addr != addrs[0][2:] && addr != addrs[1][2:]) {
+		t.Errorf("expected addrs == [<default>, <new>], got %v (%v)", addrs, addr)
 	}
 
 }

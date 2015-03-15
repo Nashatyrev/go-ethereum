@@ -4,8 +4,6 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"io/ioutil"
-	"math/big"
-	"net"
 	"path"
 	"strings"
 
@@ -214,11 +212,11 @@ func New(config *Config) (*Ethereum, error) {
 type NodeInfo struct {
 	Name       string
 	NodeUrl    string
-	NodeID     discover.NodeID
-	IP         net.IP
+	NodeID     string
+	IP         string
 	DiscPort   int // UDP listening port for discovery protocol
 	TCPPort    int // TCP listening port for RLPx
-	Td         *big.Int
+	Td         string
 	ListenAddr string
 }
 
@@ -228,30 +226,34 @@ func (s *Ethereum) NodeInfo() *NodeInfo {
 	return &NodeInfo{
 		Name:       s.Name(),
 		NodeUrl:    node.String(),
-		NodeID:     node.ID,
-		IP:         node.IP,
+		NodeID:     node.ID.String(),
+		IP:         node.IP.String(),
 		DiscPort:   node.DiscPort,
 		TCPPort:    node.TCPPort,
 		ListenAddr: s.net.ListenAddr,
-		Td:         s.ChainManager().Td(),
+		Td:         s.ChainManager().Td().String(),
 	}
 }
 
 type PeerInfo struct {
-	ID            discover.NodeID
+	ID            string
 	Name          string
-	Caps          []p2p.Cap
-	RemoteAddress net.Addr
-	LocalAddress  net.Addr
+	Caps          string
+	RemoteAddress string
+	LocalAddress  string
 }
 
 func newPeerInfo(peer *p2p.Peer) *PeerInfo {
+	var caps []string
+	for _, cap := range peer.Caps() {
+		caps = append(caps, cap.String())
+	}
 	return &PeerInfo{
-		ID:            peer.ID(),
+		ID:            peer.ID().String(),
 		Name:          peer.Name(),
-		Caps:          peer.Caps(),
-		RemoteAddress: peer.RemoteAddr(),
-		LocalAddress:  peer.LocalAddr(),
+		Caps:          strings.Join(caps, ", "),
+		RemoteAddress: peer.RemoteAddr().String(),
+		LocalAddress:  peer.LocalAddr().String(),
 	}
 }
 

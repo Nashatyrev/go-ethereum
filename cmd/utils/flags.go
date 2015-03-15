@@ -165,7 +165,7 @@ var (
 	}
 	JSpathFlag = cli.StringFlag{
 		Name:  "jspath",
-		Usage: "JS library path",
+		Usage: "JS library path to be used with console and js subcommands",
 		Value: ".",
 	}
 )

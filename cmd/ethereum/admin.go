@@ -120,7 +120,7 @@ func (js *jsre) unlock(call otto.FunctionCall) otto.Value {
 	am := js.ethereum.AccountManager()
 	err = am.TimedUnlock(ethutil.Hex2Bytes(addr), passphrase, time.Duration(seconds)*time.Second)
 	if err != nil {
-		fmt.Printf("Unlock account failed '%v'", err)
+		fmt.Printf("Unlock account failed '%v'\n", err)
 		return otto.FalseValue()
 	}
 	return otto.TrueValue()
@@ -153,7 +153,7 @@ func (js *jsre) newAccount(call otto.FunctionCall) otto.Value {
 		fmt.Printf("Could not create the account: %v", err)
 		return otto.UndefinedValue()
 	}
-	return js.re.ToVal(acct.Address)
+	return js.re.ToVal(ethutil.Bytes2Hex(acct.Address))
 }
 
 func (js *jsre) nodeInfo(call otto.FunctionCall) otto.Value {

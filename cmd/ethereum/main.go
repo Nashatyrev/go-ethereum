@@ -88,16 +88,20 @@ Use "ethereum dump 0" to dump the genesis block.
 `,
 		},
 		{
-			Action: runjs,
-			Name:   "js",
-			Usage:  `interactive JavaScript console`,
+			Action: console,
+			Name:   "console",
+			Usage:  `Ethereum Frontier Console: interactive JavaScript environment`,
 			Description: `
-In the console, you can use the eth object to interact
-with the running ethereum stack. The API does not match
-ethereum.js.
-
-A JavaScript file can be provided as the argument. The
-runtime will execute the file and exit.
+Frontier Console is an interactive shell for the Ethereum Frontier JavaScript runtime environment which exposes a node admin interface as well as the DAPP JavaScript API.
+See https://github.com/ethereum/go-ethereum/wiki/Frontier-Console
+`,
+		},
+		{
+			Action: execJSFiles,
+			Name:   "js",
+			Usage:  `executes the given JavaScript files in the Ethereum Frontier JavaScript VM`,
+			Description: `
+The Ethereum Frontier JavaScript VM exposes a node admin interface as well as the DAPP JavaScript API. See https://github.com/ethereum/go-ethereum/wiki/Frontier-Console
 `,
 		},
 		{
@@ -115,6 +119,7 @@ runtime will execute the file and exit.
 		utils.UnlockedAccountFlag,
 		utils.BootnodesFlag,
 		utils.DataDirFlag,
+		utils.JSpathFlag,
 		utils.ListenPortFlag,
 		utils.LogFileFlag,
 		utils.LogFormatFlag,
@@ -130,6 +135,7 @@ runtime will execute the file and exit.
 		utils.RPCPortFlag,
 		utils.UnencryptedKeysFlag,
 		utils.VMDebugFlag,
+
 		//utils.VMTypeFlag,
 	}
 
@@ -166,21 +172,32 @@ func run(ctx *cli.Context) {
 	eth.WaitForShutdown()
 }
 
-func runjs(ctx *cli.Context) {
+func console(ctx *cli.Context) {
 	eth, err := utils.GetEthereum(ClientIdentifier, Version, ctx)
 	if err != nil {
 		utils.Fatalf("%v", err)
 	}
 
 	startEth(ctx, eth)
-	repl := newJSRE(eth, ctx.GlobalString(utils.JSpathFlag.Name))
-	if len(ctx.Args()) == 0 {
-		repl.interactive()
-	} else {
-		for _, file := range ctx.Args() {
-			repl.exec(file)
-		}
+	repl := newJSRE(eth, ctx.String(utils.JSpathFlag.Name))
+	repl.interactive()
+
+	eth.Stop()
+	eth.WaitForShutdown()
+}
+
+func execJSFiles(ctx *cli.Context) {
+	eth, err := utils.GetEthereum(ClientIdentifier, Version, ctx)
+	if err != nil {
+		utils.Fatalf("%v", err)
 	}
+
+	startEth(ctx, eth)
+	repl := newJSRE(eth, ctx.String(utils.JSpathFlag.Name))
+	for _, file := range ctx.Args() {
+		repl.exec(file)
+	}
+
 	eth.Stop()
 	eth.WaitForShutdown()
 }
