@@ -93,6 +93,9 @@ type RpcSuccessResponse struct {
 	Id      interface{} `json:"id"`
 	Jsonrpc string      `json:"jsonrpc"`
 	Result  interface{} `json:"result"`
+	id      interface{} `json:"id"`
+	jsonrpc string      `json:"jsonrpc"`
+	result  interface{} `json:"result"`
 }
 
 type RpcErrorResponse struct {
