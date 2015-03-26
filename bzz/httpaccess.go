@@ -116,7 +116,8 @@ func handler(w http.ResponseWriter, r *http.Request, dpa *DPA) {
 		if uriMatcher.MatchString(uri) {
 			dpaLogger.Debugf("Swarm: Raw GET request %s received", uri)
 			name := uri[5:69]
-			key := common.Hex2Bytes(name)
+			key := &common.Hash{}
+			copy(key[:], common.Hex2Bytes(name))
 			reader := dpa.Retrieve(key)
 			dpaLogger.Debugf("Swarm: Reading %d bytes.", reader.Size())
 			mimeType := "application/octet-stream"
@@ -131,7 +132,8 @@ func handler(w http.ResponseWriter, r *http.Request, dpa *DPA) {
 			name := uri[1:65]
 			path := uri[65:] // typically begins with a /
 			dpaLogger.Debugf("Swarm: path \"%s\" requested.", path)
-			key := common.Hex2Bytes(name)
+			key := &common.Hash{}
+			copy(key[:], common.Hex2Bytes(name))
 		MANIFEST_RESOLUTION:
 			for {
 				manifestReader := dpa.Retrieve(key)
@@ -159,7 +161,7 @@ func handler(w http.ResponseWriter, r *http.Request, dpa *DPA) {
 					dpaLogger.Debugf("Swarm: Manifest %s has %d entries.", name, len(man.Entries))
 				}
 				var mimeType string
-				key = nil
+				key = &common.Hash{}
 				prefix := 0
 				status := int16(404)
 			MANIFEST_ENTRIES:
@@ -180,13 +182,13 @@ func handler(w http.ResponseWriter, r *http.Request, dpa *DPA) {
 					if len(path) >= pathLen && path[:pathLen] == entry.Path && prefix <= pathLen {
 						dpaLogger.Debugf("Swarm: \"%s\" matches \"%s\".", path, entry.Path)
 						prefix = pathLen
-						key = common.Hex2Bytes(entry.Hash)
+						copy(key[:], common.Hex2Bytes(entry.Hash))
 						dpaLogger.Debugf("Swarm: Payload hash %064x", key)
 						mimeType = entry.ContentType
 						status = entry.Status
 					}
 				}
-				if key == nil {
+				if (*key == common.Hash{}) {
 					http.Error(w, "Object "+uri+" not found.", http.StatusNotFound)
 					break MANIFEST_RESOLUTION
 				} else if mimeType != manifestType {

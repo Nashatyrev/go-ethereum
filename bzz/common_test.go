@@ -5,6 +5,8 @@ import (
 	"io"
 	"sync"
 	"testing"
+
+	"github.com/ethereum/go-ethereum/common"
 )
 
 func testDataReader(l int) (r *ChunkReader, slice []byte) {
@@ -16,12 +18,12 @@ func testDataReader(l int) (r *ChunkReader, slice []byte) {
 	return
 }
 
-func randomChunks(l int64, branches int64, chunkC chan *Chunk) (key Key, errC chan error) {
+func randomChunks(l int64, branches int64, chunkC chan *Chunk) (key *common.Hash, errC chan error) {
 	chunker := &TreeChunker{
 		Branches: branches,
 	}
 	chunker.Init()
-	key = make([]byte, 32)
+	key = &common.Hash{}
 	b := make([]byte, l)
 	_, err := rand.Read(b)
 	if err != nil {

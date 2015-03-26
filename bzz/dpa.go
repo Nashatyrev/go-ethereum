@@ -6,6 +6,7 @@ import (
 	// "time"
 	// "fmt"
 
+	"github.com/ethereum/go-ethereum/common"
 	ethlogger "github.com/ethereum/go-ethereum/logger"
 )
 
@@ -58,7 +59,7 @@ type DPA struct {
 type Chunk struct {
 	SData []byte         // nil if request, to be supplied by dpa
 	Size  int64          // size of the data covered by the subtree encoded in this chunk
-	Key   Key            // always
+	Key   *common.Hash   // always
 	C     chan bool      // to signal data delivery by the dpa
 	req   *requestStatus //
 	wg    *sync.WaitGroup
@@ -66,17 +67,17 @@ type Chunk struct {
 
 type ChunkStore interface {
 	Put(*Chunk) // effectively there is no error even if there is no error
-	Get(Key) (*Chunk, error)
+	Get(*common.Hash) (*Chunk, error)
 }
 
-func (self *DPA) Retrieve(key Key) SectionReader {
+func (self *DPA) Retrieve(key *common.Hash) SectionReader {
 
 	return self.Chunker.Join(key, self.retrieveC)
 	// we can add subscriptions etc. or timeout here
 }
 
-func (self *DPA) Store(data SectionReader, wg *sync.WaitGroup) (key Key, err error) {
-	key = make([]byte, self.Chunker.KeySize())
+func (self *DPA) Store(data SectionReader, wg *sync.WaitGroup) (key *common.Hash, err error) {
+	key = &common.Hash{}
 	errC := self.Chunker.Split(key, data, self.storeC, wg)
 
 SPLIT:

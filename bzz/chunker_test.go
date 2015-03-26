@@ -2,12 +2,13 @@ package bzz
 
 import (
 	"bytes"
-	// "fmt"
+	"fmt"
 	"io"
 	"testing"
 	"time"
 
 	"github.com/ethereum/go-ethereum/blockpool/test"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 /*
@@ -27,7 +28,7 @@ func (self *chunkerTester) checkChunks(t *testing.T, want int) {
 	}
 }
 
-func (self *chunkerTester) Split(chunker *TreeChunker, l int) (key Key, input []byte) {
+func (self *chunkerTester) Split(chunker *TreeChunker, l int) (key *common.Hash, input []byte) {
 	// reset
 	self.errors = nil
 	self.chunks = nil
@@ -35,10 +36,12 @@ func (self *chunkerTester) Split(chunker *TreeChunker, l int) (key Key, input []
 
 	data, slice := testDataReader(l)
 	input = slice
-	key = make([]byte, 32)
 	chunkC := make(chan *Chunk, 1000)
+	key = &common.Hash{}
+	fmt.Printf("key: %x\n", key)
 	errC := chunker.Split(key, data, chunkC, nil)
 	quitC := make(chan bool)
+	fmt.Printf("key: %x\n", key)
 	timeout := time.After(600 * time.Second)
 
 	go func() {
@@ -51,6 +54,8 @@ func (self *chunkerTester) Split(chunker *TreeChunker, l int) (key Key, input []
 
 			case chunk := <-chunkC:
 				if chunk != nil {
+					fmt.Printf("chunk: %#v", chunk)
+
 					self.chunks = append(self.chunks, chunk)
 				} else {
 					break LOOP
@@ -60,7 +65,7 @@ func (self *chunkerTester) Split(chunker *TreeChunker, l int) (key Key, input []
 				if err != nil {
 					self.errors = append(self.errors, err)
 				}
-				// fmt.Printf("err %v", err)
+				fmt.Printf("err %v", err)
 				if !ok {
 					close(chunkC)
 					errC = nil
@@ -73,7 +78,7 @@ func (self *chunkerTester) Split(chunker *TreeChunker, l int) (key Key, input []
 	return
 }
 
-func (self *chunkerTester) Join(chunker *TreeChunker, key Key, c int) SectionReader {
+func (self *chunkerTester) Join(chunker *TreeChunker, key *common.Hash, c int) SectionReader {
 	// reset but not the chunks
 	self.errors = nil
 	self.timeout = false
@@ -101,7 +106,7 @@ func (self *chunkerTester) Join(chunker *TreeChunker, key Key, c int) SectionRea
 				// this just mocks the behaviour of a chunk store retrieval
 				var found bool
 				for _, ch := range self.chunks {
-					if bytes.Equal(chunk.Key, ch.Key) {
+					if *chunk.Key == *ch.Key {
 						found = true
 						chunk.SData = ch.SData
 						break
@@ -120,8 +125,9 @@ func (self *chunkerTester) Join(chunker *TreeChunker, key Key, c int) SectionRea
 
 func testRandomData(chunker *TreeChunker, tester *chunkerTester, n int, chunks int, t *testing.T) {
 	key, input := tester.Split(chunker, n)
+	// fmt.Printf("key: %x\n", key)
 
-	t.Logf(" Key = %x\n", key)
+	t.Logf("Key = %x\n", key)
 
 	tester.checkChunks(t, chunks)
 	time.Sleep(100 * time.Millisecond)
@@ -148,8 +154,8 @@ func TestRandomData(t *testing.T) {
 	chunker.Init()
 	tester := &chunkerTester{}
 	testRandomData(chunker, tester, 60, 1, t)
-	testRandomData(chunker, tester, 179, 5, t)
-	testRandomData(chunker, tester, 253, 7, t)
+	// testRandomData(chunker, tester, 179, 5, t)
+	// testRandomData(chunker, tester, 253, 7, t)
 	// t.Logf("chunks %v", tester.chunks)
 }
 

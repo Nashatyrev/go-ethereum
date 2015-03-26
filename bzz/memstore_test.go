@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/blockpool/test"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 func testMemStore(l int64, branches int64, t *testing.T) {
@@ -38,8 +39,7 @@ func TestMemStore2_100(t *testing.T) {
 func TestMemStoreNotFound(t *testing.T) {
 	test.LogInit()
 	m := newMemStore(nil)
-	zeroKey := make([]byte, 32)
-	_, err := m.Get(zeroKey)
+	_, err := m.Get(&common.Hash{})
 	if err != notFound {
 		t.Errorf("Expected notFound, got %v", err)
 	}

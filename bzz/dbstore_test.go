@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/blockpool/test"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 func initDbStore() (m *dbStore) {
@@ -56,8 +57,7 @@ func TestDbStoreNotFound(t *testing.T) {
 	test.LogInit()
 	m := initDbStore()
 	defer m.close()
-	zeroKey := make([]byte, 32)
-	_, err := m.Get(zeroKey)
+	_, err := m.Get(&common.Hash{})
 	if err != notFound {
 		t.Errorf("Expected notFound, got %v", err)
 	}

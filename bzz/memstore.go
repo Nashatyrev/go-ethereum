@@ -3,8 +3,9 @@
 package bzz
 
 import (
-	"bytes"
 	"sync"
+
+	"github.com/ethereum/go-ethereum/common"
 )
 
 const (
@@ -43,19 +44,11 @@ func newMemStore(d *dbStore) (m *memStore) {
 	return
 }
 
-func (x Key) Size() uint {
-	return uint(len(x))
-}
-
-func (x Key) isEqual(y Key) bool {
-	return bytes.Compare(x, y) == 0
-}
-
-func (h Key) bits(i, j uint) uint {
+func bits(h *common.Hash, i, j uint) uint {
 
 	ii := i >> 3
 	jj := i & 7
-	if ii >= h.Size() {
+	if ii >= uint(len(h)) {
 		return 0
 	}
 
@@ -178,7 +171,7 @@ func (s *memStore) Put(entry *Chunk) {
 	node := s.memtree
 	bitpos := uint(0)
 	for node.entry == nil {
-		l := entry.Key.bits(bitpos, node.bits)
+		l := bits(entry.Key, bitpos, node.bits)
 		st := node.subtree[l]
 		if st == nil {
 			st = newMemTree(memTreeLW, node, l)
@@ -192,7 +185,7 @@ func (s *memStore) Put(entry *Chunk) {
 
 	if node.entry != nil {
 
-		if node.entry.Key.isEqual(entry.Key) {
+		if *node.entry.Key == *entry.Key {
 			node.updateAccess(s.accessCnt)
 			if entry.SData == nil {
 				entry.Size = node.entry.Size
@@ -208,7 +201,7 @@ func (s *memStore) Put(entry *Chunk) {
 
 		for node.entry != nil {
 
-			l := node.entry.Key.bits(bitpos, node.bits)
+			l := bits(node.entry.Key, bitpos, node.bits)
 			st := node.subtree[l]
 			if st == nil {
 				st = newMemTree(memTreeLW, node, l)
@@ -217,7 +210,7 @@ func (s *memStore) Put(entry *Chunk) {
 			node.entry = nil
 			st.updateAccess(node.access[0])
 
-			l = entry.Key.bits(bitpos, node.bits)
+			l = bits(entry.Key, bitpos, node.bits)
 			st = node.subtree[l]
 			if st == nil {
 				st = newMemTree(memTreeLW, node, l)
@@ -236,7 +229,7 @@ func (s *memStore) Put(entry *Chunk) {
 	return
 }
 
-func (s *memStore) Get(hash Key) (chunk *Chunk, err error) {
+func (s *memStore) Get(hash *common.Hash) (chunk *Chunk, err error) {
 
 	s.lock.Lock()
 	defer s.lock.Unlock()
@@ -244,7 +237,7 @@ func (s *memStore) Get(hash Key) (chunk *Chunk, err error) {
 	node := s.memtree
 	bitpos := uint(0)
 	for node.entry == nil {
-		l := hash.bits(bitpos, node.bits)
+		l := bits(hash, bitpos, node.bits)
 		st := node.subtree[l]
 		if st == nil {
 			return nil, notFound
@@ -253,7 +246,7 @@ func (s *memStore) Get(hash Key) (chunk *Chunk, err error) {
 		node = st
 	}
 
-	if node.entry.Key.isEqual(hash) {
+	if node.entry.Key == hash {
 		s.accessCnt++
 		node.updateAccess(s.accessCnt)
 		chunk = node.entry

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/syndtr/goleveldb/leveldb"
@@ -77,7 +78,7 @@ func (s *dbStore) updateIndexAccess(index *dpaDBIndex) {
 
 }
 
-func getIndexKey(hash Key) []byte {
+func getIndexKey(hash *common.Hash) []byte {
 
 	HashSize := len(hash)
 	key := make([]byte, HashSize+1)
@@ -313,7 +314,7 @@ func (s *dbStore) tryAccessIdx(ikey []byte, index *dpaDBIndex) bool {
 	return true
 }
 
-func (s *dbStore) Get(key Key) (chunk *Chunk, err error) {
+func (s *dbStore) Get(key *common.Hash) (chunk *Chunk, err error) {
 
 	s.lock.Lock()
 	defer s.lock.Unlock()
@@ -338,7 +339,7 @@ func (s *dbStore) Get(key Key) (chunk *Chunk, err error) {
 
 }
 
-func (s *dbStore) updateAccessCnt(key Key) {
+func (s *dbStore) updateAccessCnt(key *common.Hash) {
 
 	s.lock.Lock()
 	defer s.lock.Unlock()

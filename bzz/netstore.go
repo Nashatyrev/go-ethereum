@@ -5,6 +5,8 @@ import (
 	"math/rand"
 	"sync"
 	"time"
+
+	"github.com/ethereum/go-ethereum/common"
 )
 
 type NetStore struct {
@@ -37,7 +39,7 @@ var (
 )
 
 type requestStatus struct {
-	key        Key
+	key        *common.Hash
 	status     int
 	requesters map[int64][]*retrieveRequestMsgData
 	C          chan bool
@@ -103,7 +105,7 @@ func (self *NetStore) addStoreRequest(req *storeRequestMsgData) {
 }
 
 // waits for response or times  out
-func (self *NetStore) Get(key Key) (chunk *Chunk, err error) {
+func (self *NetStore) Get(key *common.Hash) (chunk *Chunk, err error) {
 	chunk = self.get(key)
 	id := generateId()
 	timeout := time.Now().Add(searchTimeout)
@@ -125,7 +127,7 @@ func (self *NetStore) Get(key Key) (chunk *Chunk, err error) {
 	return
 }
 
-func (self *NetStore) get(key Key) (chunk *Chunk) {
+func (self *NetStore) get(key *common.Hash) (chunk *Chunk) {
 	var err error
 	chunk, err = self.localStore.Get(key)
 	dpaLogger.Debugf("NetStore.get: localStore.Get of %064x returned with %v.", key, err)

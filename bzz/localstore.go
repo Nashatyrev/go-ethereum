@@ -1,6 +1,10 @@
 // localstore.go
 package bzz
 
+import (
+	"github.com/ethereum/go-ethereum/common"
+)
+
 type localStore struct {
 	memStore *memStore
 	dbStore  *dbStore
@@ -23,7 +27,7 @@ func (self *localStore) Put(chunk *Chunk) {
 
 // Get(chunk *Chunk) looks up a chunk in the local stores
 // This method is blocking until the chunk is retrieved so additional timeout is needed to wrap this call
-func (self *localStore) Get(key Key) (chunk *Chunk, err error) {
+func (self *localStore) Get(key *common.Hash) (chunk *Chunk, err error) {
 	chunk, err = self.memStore.Get(key)
 	if err == nil {
 		return

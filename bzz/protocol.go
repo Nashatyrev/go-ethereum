@@ -10,6 +10,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/p2p"
 )
 
@@ -73,8 +74,8 @@ type statusMsgData struct {
  if the storage request is sufficiently close (within our proximity range (the last row of the routing table), then sending it to all peers will not guarantee convergence, so there needs to be an absolute expiry of the request too. Maybe the protocol should specify a forward probability exponentially declining with age.
 */
 type storeRequestMsgData struct {
-	Key   Key    // hash of datasize | data
-	SData []byte // is this needed?
+	Key   *common.Hash // hash of datasize | data
+	SData []byte       // is this needed?
 	// optional
 	Id             uint64     //
 	requestTimeout *time.Time // expiry for forwarding
@@ -92,7 +93,7 @@ In the special case that the key is identical to the peers own address (hash of 
 It is unclear if a retrieval request with an empty target is the same as a self lookup
 */
 type retrieveRequestMsgData struct {
-	Key Key
+	Key *common.Hash
 	// optional
 	Id      uint64     //
 	MaxSize uint64     //  maximum size of delivery accepted
@@ -117,10 +118,10 @@ The Key is the target (if response to a retrieval request) or peers address (has
 It is unclear if PeersMsg with an empty Key has a special meaning or just mean the same as with the peers address as Key (cademlia bin)
 */
 type peersMsgData struct {
-	Peers   []*peerAddr //
-	timeout *time.Time  // indicate whether responder is expected to deliver content
-	Key     Key         // if a response to a retrieval request
-	Id      uint64      // if a response to a retrieval request
+	Peers   []*peerAddr  //
+	timeout *time.Time   // indicate whether responder is expected to deliver content
+	Key     *common.Hash // if a response to a retrieval request
+	Id      uint64       // if a response to a retrieval request
 	//
 	peer peer
 }
@@ -208,7 +209,7 @@ func (self *bzzProtocol) handle() error {
 			return self.protoError(ErrDecode, "->msg %v: %v", msg, err)
 		}
 		dpaLogger.Debugf("Request message: %#v", req)
-		if req.Key == nil {
+		if (*req.Key == common.Hash{}) {
 			return self.protoError(ErrDecode, "protocol handler: req.Key == nil || req.Timeout == nil")
 		}
 		req.peer = peer{bzzProtocol: self}
